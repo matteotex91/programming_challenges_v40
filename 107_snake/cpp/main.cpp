@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <thread>
 #include <termios.h>
+#include <random>
 
 using namespace std;
 
@@ -10,6 +11,9 @@ struct termios t;
 
 const int SIZE_X = 80;
 const int SIZE_Y = 30;
+const int INIT_SIZE = 3;
+const int FOOD_INDEX = SIZE_X * SIZE_Y;
+const int INIT_DIRECTION = 0;
 
 void redraw(int (*map)[SIZE_X][SIZE_Y])
 {
@@ -45,15 +49,42 @@ void redraw(int (*map)[SIZE_X][SIZE_Y])
     cout << "+" << endl;
 }
 
-void thread_job(bool *running, int (*map)[SIZE_X][SIZE_Y])
+void main_cycle(bool *running, int (*map)[SIZE_X][SIZE_Y], int *head_x, int *head_y, int *snake_size, int *food_x, int *food_y)
 {
-    int x = 0;
+    random_device rd;  // obtain a random number from hardware
+    mt19937 gen(rd()); // seed the generator
+    uniform_int_distribution<> food_rand_X(0, SIZE_X - 1);
+    uniform_int_distribution<> food_rand_Y(0, SIZE_Y - 1);
+    bool alive = true;
     while (*running)
     {
-        x = (x + 1) % SIZE_X;
-        *map[x][0] = 1;
-        usleep(500000);
-        redraw(map);
+        for (int ix = 0; ix < SIZE_X; ix++)
+        {
+            for (int iy = 0; iy < SIZE_Y; iy++)
+            {
+                *map[ix][iy] = 0;
+            }
+        }
+        *head_x = SIZE_X / 2;
+        *head_y = SIZE_Y / 2;
+        *snake_size = INIT_SIZE;
+        for (int index = 0; index < *snake_size; index++)
+        {
+            *map[*head_x - index][*head_y] = *snake_size - index; // ??? check
+        }
+        *food_x = food_rand_X(gen);
+        *food_y = food_rand_Y(gen);
+        *map[*food_x][*food_y] = FOOD_INDEX;
+        while (alive)
+        {
+            // check if stepped on the food
+            if ((*food_x == *head_x) && (*food_y == *head_y))
+            {
+                *snake_size++;
+            }
+            // make step
+            switch ()
+        }
     }
 }
 
@@ -64,6 +95,7 @@ int main()
     tcsetattr(STDIN_FILENO, TCSANOW, &t);
 
     int map[SIZE_X][SIZE_Y] = {{}};
+
     for (int ix = 0; ix < SIZE_X; ix++)
     {
         for (int iy = 0; iy < SIZE_Y; iy++)
@@ -72,11 +104,11 @@ int main()
         }
     }
 
-    int x = 0;
-    int y = 0;
+    int head_x = 0;
+    int head_y = 0;
     bool running = true;
 
-    thread t1(thread_job, &running, &x, &y);
+    thread t1(main_cycle, &running, &head_x, &head_y);
 
     // t1.join();
     // char user_input;
