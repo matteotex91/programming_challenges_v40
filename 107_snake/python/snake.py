@@ -1,147 +1,195 @@
-import numpy as np
-from threading import Thread
-from random import randint
-from typing import Optional
+import random
 import sys
-from time import sleep
+import numpy as np
+from random import randint
+
 from PyQt5.QtWidgets import (
-    QGraphicsScene,
-    QGraphicsView,
-    QGraphicsRectItem,
     QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QGraphicsRectItem,
+    QWidget,
+    QGraphicsScene,
 )
-from PyQt5.QtGui import QBrush, QPen
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeyEvent, QCloseEvent
-
-""" This class contains all the informations and functions needed to plot and collect keyboard events
-Snake directions :
-0 -> right
-1 -> up
-2 -> left
-3 -> down
-"""
+from PyQt5.QtCore import QObject, QThread, QMutex, pyqtSignal, Qt
+from PyQt5.QtGui import QKeyEvent
 
 
-class SnakeGraphicsView(QGraphicsView):
-    def __init__(
-        self,
-        map_shape: np.ndarray = np.array([25, 25]),
-        pixel_shape: np.ndarray = np.array([25, 25]),
-        draw_rect_offset: int = 3,
-    ) -> None:
-        QGraphicsView.__init__(self)
-        self._pixel_shape = pixel_shape
-        self._graphics_shape = map_shape * pixel_shape
-        self._draw_rect_offset = draw_rect_offset
-        self._scene = QGraphicsScene(
-            0, 0, self._graphics_shape[0], self._graphics_shape[1]
-        )
-        self.setScene(self._scene)
-        self._snake_direction = 0
-        self._running = True
-        self._snake_brush = QBrush(Qt.blue)
-        self._food_brush = QBrush(Qt.red)
-        self._brushes = [self._snake_brush, self._food_brush]
-        self._key_trigger = False
-        self.show()
-
-    def keyPressEvent(self, keyEvent: QKeyEvent) -> None:
-        self._key_trigger = False
-        # Process the event as this function was not overdriven
-        super(SnakeGraphicsView, self).keyPressEvent(keyEvent)
-        match keyEvent.key():
-            case Qt.Key_D:
-                self._snake_direction = 0
-            case Qt.Key_W:
-                self._snake_direction = 1
-            case Qt.Key_A:
-                self._snake_direction = 2
-            case Qt.Key_S:
-                self._snake_direction = 3
-            case Qt.Key_Escape:
-                self._running = False
-                self.close()
-
-    def closeEvent(self, closeEvent: QCloseEvent):
-        super(SnakeGraphicsView, self).closeEvent(closeEvent)
-        self._running = False
-        self.close()
-
-    """ This function draws a color in the scene
-    0 -> snake
-    1 -> food
-    """
-
-    def draw_rect(self, pixel_x: int, pixel_y: int, color: int):
-        rect = QGraphicsRectItem(
-            pixel_y * self._pixel_shape[1] + self._draw_rect_offset,
-            pixel_x * self._pixel_shape[0] + self._draw_rect_offset,
-            self._pixel_shape[1] - 2 * self._draw_rect_offset,
-            self._pixel_shape[0] - 2 * self._draw_rect_offset,
-        )
-        rect.setBrush(self._brushes[color])
-        self._scene.addItem(rect)
-
-    def redraw_snake_graphics(self, map: np.ndarray, food_position: np.ndarray) -> None:
-        self._scene.clear()
-        map_shape = map.shape
-        for ix in range(map_shape[0]):
-            for iy in range(map_shape[1]):
-                if map[ix, iy] != 0:
-                    self.draw_rect(ix, iy, 0)
-
-        self.draw_rect(food_position[0], food_position[1], 1)
-        # self.setScene(self._scene)
-        # self.show()
-
-
-class SnakeEngine:
-    INIT_SIZE = 3
+class GameEngine(QObject):
+    gameDataSignal = pyqtSignal(object)
 
     def __init__(
         self,
-        map_shape: np.ndarray = np.array([25, 25]),
-        pixel_shape: np.ndarray = np.array([25, 25]),
-        draw_rect_offset: int = 3,
+        map_shape: np.ndarray,
+        init_snake_size: int,
+        tick_time_millis: int,
     ):
-        self._map_shape = map_shape
-        # head position
-        self.init_game()
-        self._graphics = SnakeGraphicsView(map_shape, pixel_shape, draw_rect_offset)
-        self._alive = True
-        game_thread = Thread(target=self.game_cycle)
-        game_thread.start()
+        QObject.__init__(self)
+        self.game_started = False
+        self.running = True
+        self.runningLock = QMutex()
+        self.map_shape = map_shape
+        self.init_snake_size = init_snake_size
+        self.food_position = None
+        self.map = None
+        self.snake_size = None
+        self.snake_direction = None
+        self.tick_time_millis = tick_time_millis
 
-    def game_cycle(self):
-        while self._graphics._running:
-            self._graphics._key_trigger = True
-            while self._graphics._key_trigger:
-                sleep(0.1)
-            while self._alive:
-                print("test")
-                sleep(1)
+    def stop(self):
+        self.runningLock.lock()
+        self.running = False
+        self.runningLock.unlock()
 
-    def place_food(self):
+    def stillRunning(self):
+        self.runningLock.lock()
+        value = self.running
+        self.runningLock.unlock()
+        return value
+
+    def start_game(self):
+        self.runningLock.lock()
+        self.game_started = True
+        self.runningLock.unlock()
+
+    def is_game_started(self):
+        self.runningLock.lock()
+        value = self.game_started
+        self.runningLock.unlock()
+        return value
+
+    def set_snake_direction(self, dir):
+        self.runningLock.lock()
+        self.snake_direction = dir
+        self.runningLock.unlock()
+
+    def init_food(self):
+        self.runningLock.lock()
         correct_position_found = False
         while not correct_position_found:
             new_food_position = np.array(
-                [randint(0, self._map_shape[0] - 1), randint(0, self._map_shape[1] - 1)]
+                [randint(0, self.map_shape[0] - 1), randint(0, self.map_shape[1] - 1)]
             )
-            if 
-        self._food_position = np.array([])
+            if self.map[new_food_position[0], new_food_position[1]] != 0:
+                self.food_position = new_food_position
+                correct_position_found = True
+        self.runningLock.unlock()
 
-    def init_game(self):
-        self._map = np.zeros(self._map_shape)
-        self._size = self.INIT_SIZE
-        for i in range(self._size):
-            self._map[self._map_shape[0] // 2 - i, self._map_shape[1] // 2] = (
-                self.INIT_SIZE - i
+    def init_map(self):
+        self.runningLock.lock()
+        self.map = np.zeros(self.map_shape)
+        self.snake_size = self.init_snake_size
+        self.snake_direction = 0
+        for i in range(self.snake_size):
+            self.map[self.map_shape[0] // 2 - i, self.map_shape[1] // 2] = (
+                self.init_snake_size - i
             )
-        self._food_position = np.array([])
+        self.runningLock.unlock()
+
+    def update_map(self):
+        self.runningLock.lock()
+        self.runningLock.unlock()
+
+    def main_cycle(self):
+        while self.stillRunning() and not self.is_game_started():
+            self.thread().msleep(100)
+        while self.stillRunning() and self.is_game_started():
+            self.init_map()
+            self.init_food()
+            self.update_map()
+            self.gameDataSignal.emit((self.map, self.food_position))
+            self.thread().msleep(self.tick_time_millis)
+
+
+class GameThread(QThread):
+    def __init__(
+        self,
+        produce_callback,
+        map_shape: np.ndarray,
+        init_snake_size: int,
+        tick_time_millis: int,
+    ):
+        QThread.__init__(self)
+        self.engine = GameEngine(
+            init_snake_size=init_snake_size,
+            map_shape=map_shape,
+            tick_time_millis=tick_time_millis,
+        )
+        self.engine.moveToThread(self)
+        self.started.connect(self.engine.main_cycle)
+        self.engine.gameDataSignal.connect(produce_callback)
+
+    def stop(self):
+        self.engine.stop()
+
+
+class GameScene(QWidget):
+    def __init__(
+        self,
+        map_shape: np.ndarray = np.array([25, 25]),
+        pixel_shape: np.ndarray = np.array([25, 25]),
+        init_snake_size: int = 3,
+        tick_time_millis: int = 1000,
+        draw_rect_offset: int = 3,
+    ):
+        QWidget.__init__(self)
+        self.map_shape = map_shape
+        self.pixel_shape = pixel_shape
+        self.init_snake_size = init_snake_size
+        self.tick_time_millis = tick_time_millis
+        self.draw_rect_offset = draw_rect_offset
+
+        self.game_thread = GameThread(
+            produce_callback=self.redraw_game_graphics,
+            init_snake_size=init_snake_size,
+            map_shape=map_shape,
+            tick_time_millis=tick_time_millis,
+        )
+        self.game_thread.start()
+
+    def redraw_game_graphics(self, gameData):
+        rect = QGraphicsRectItem(0, 0, 50, 50)
+        rect.setBrush(Qt.red)
+
+    def sceneInterceptCloseEvent(self, evt):
+        self.game_thread.stop()
+        self.game_thread.wait()
+        evt.accept()
+
+
+class GameWindow(QMainWindow):
+    def __init__(self):
+        QMainWindow.__init__(self)
+        self.scene = GameScene()
+        self.setFixedSize(
+            self.scene.pixel_shape[0] * self.scene.map_shape[0],
+            self.scene.pixel_shape[1] * self.scene.map_shape[1],
+        )
+        self.setCentralWidget(self.scene)
+
+    def closeEvent(self, evt):
+        self.scene.sceneInterceptCloseEvent(evt)
+
+    def keyPressEvent(self, keyEvent: QKeyEvent) -> None:
+        super(QMainWindow, self).keyPressEvent(keyEvent)
+        if not self.scene.game_thread.engine.is_game_started():
+            self.scene.game_thread.engine.start_game()
+        match keyEvent.key():
+            case Qt.Key_D:
+                self.scene.game_thread.engine.set_snake_direction(0)
+            case Qt.Key_W:
+                self.scene.game_thread.engine.set_snake_direction(1)
+            case Qt.Key_A:
+                self.scene.game_thread.engine.set_snake_direction(2)
+            case Qt.Key_S:
+                self.scene.game_thread.engine.set_snake_direction(3)
+            case Qt.Key_Escape:
+                self.scene.game_thread.stop()
+                self.close()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    game = SnakeEngine()
+    win = GameWindow()
+    win.show()
     app.exec_()
