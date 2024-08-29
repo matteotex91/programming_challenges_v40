@@ -1,5 +1,10 @@
 import sys
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsView, QGraphicsRectItem, QApplication
+from PyQt5.QtWidgets import (
+    QGraphicsScene,
+    QGraphicsView,
+    QGraphicsRectItem,
+    QApplication,
+)
 from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtCore import Qt
 
@@ -20,9 +25,9 @@ brush = QBrush(Qt.red)
 rect.setBrush(brush)
 
 # Define the pen (line)
-#pen = QPen(Qt.cyan)
-#pen.setWidth(10)
-#rect.setPen(pen)
+# pen = QPen(Qt.cyan)
+# pen.setWidth(10)
+# rect.setPen(pen)
 
 scene.addItem(rect)
 
