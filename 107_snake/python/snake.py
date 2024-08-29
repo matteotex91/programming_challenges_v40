@@ -106,6 +106,7 @@ class SnakeEngine:
         draw_rect_offset: int = 3,
     ):
         self._map_shape = map_shape
+        # head position
         self.init_game()
         self._graphics = SnakeGraphicsView(map_shape, pixel_shape, draw_rect_offset)
         self._alive = True
@@ -121,6 +122,15 @@ class SnakeEngine:
                 print("test")
                 sleep(1)
 
+    def place_food(self):
+        correct_position_found = False
+        while not correct_position_found:
+            new_food_position = np.array(
+                [randint(0, self._map_shape[0] - 1), randint(0, self._map_shape[1] - 1)]
+            )
+            if 
+        self._food_position = np.array([])
+
     def init_game(self):
         self._map = np.zeros(self._map_shape)
         self._size = self.INIT_SIZE
@@ -128,8 +138,7 @@ class SnakeEngine:
             self._map[self._map_shape[0] // 2 - i, self._map_shape[1] // 2] = (
                 self.INIT_SIZE - i
             )
-        self._food_position=
-        
+        self._food_position = np.array([])
 
 
 if __name__ == "__main__":
