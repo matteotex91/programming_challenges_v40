@@ -93,12 +93,14 @@ class GameEngine(QObject):
     def main_cycle(self):
         while self.stillRunning() and not self.is_game_started():
             self.thread().msleep(100)
+            print("wait")
         while self.stillRunning() and self.is_game_started():
             self.init_map()
             self.init_food()
             self.update_map()
             self.gameDataSignal.emit((self.map, self.food_position))
             self.thread().msleep(self.tick_time_millis)
+            print("cycle")
 
 
 class GameThread(QThread):
@@ -138,6 +140,8 @@ class GameScene(QWidget):
         self.init_snake_size = init_snake_size
         self.tick_time_millis = tick_time_millis
         self.draw_rect_offset = draw_rect_offset
+        self.scene_layout = QVBoxLayout()
+        self.setLayout(self.scene_layout)
 
         self.game_thread = GameThread(
             produce_callback=self.redraw_game_graphics,
@@ -150,6 +154,7 @@ class GameScene(QWidget):
     def redraw_game_graphics(self, gameData):
         rect = QGraphicsRectItem(0, 0, 50, 50)
         rect.setBrush(Qt.red)
+        self.scene_layout.addWidget(rect)
 
     def sceneInterceptCloseEvent(self, evt):
         self.game_thread.stop()
@@ -170,22 +175,22 @@ class GameWindow(QMainWindow):
     def closeEvent(self, evt):
         self.scene.sceneInterceptCloseEvent(evt)
 
-    def keyPressEvent(self, keyEvent: QKeyEvent) -> None:
-        super(QMainWindow, self).keyPressEvent(keyEvent)
-        if not self.scene.game_thread.engine.is_game_started():
-            self.scene.game_thread.engine.start_game()
-        match keyEvent.key():
-            case Qt.Key_D:
-                self.scene.game_thread.engine.set_snake_direction(0)
-            case Qt.Key_W:
-                self.scene.game_thread.engine.set_snake_direction(1)
-            case Qt.Key_A:
-                self.scene.game_thread.engine.set_snake_direction(2)
-            case Qt.Key_S:
-                self.scene.game_thread.engine.set_snake_direction(3)
-            case Qt.Key_Escape:
-                self.scene.game_thread.stop()
-                self.close()
+    # def keyPressEvent(self, keyEvent: QKeyEvent) -> None:
+    #    super(QMainWindow, self).keyPressEvent(keyEvent)
+    #    print("key")
+    #    if not self.scene.game_thread.engine.is_game_started():
+    #        self.scene.game_thread.engine.start_game()
+    #    match keyEvent.key():
+    #        case Qt.Key_D:
+    #            self.scene.game_thread.engine.set_snake_direction(0)
+    #        case Qt.Key_W:
+    #            self.scene.game_thread.engine.set_snake_direction(1)
+    #        case Qt.Key_A:
+    #            self.scene.game_thread.engine.set_snake_direction(2)
+    #        case Qt.Key_S:
+    #            self.scene.game_thread.engine.set_snake_direction(3)
+    #        case Qt.Key_Escape:
+    #            self.scene.game_thread.stop()
 
 
 if __name__ == "__main__":
