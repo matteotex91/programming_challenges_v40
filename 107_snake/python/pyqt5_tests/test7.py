@@ -10,10 +10,9 @@ from PyQt5.QtWidgets import (
     QGraphicsRectItem,
     QWidget,
     QGraphicsScene,
-    QLabel,
 )
 from PyQt5.QtCore import QObject, QThread, QMutex, pyqtSignal, Qt
-from PyQt5.QtGui import QKeyEvent, QPixmap, QPainter, QPen
+from PyQt5.QtGui import QKeyEvent
 
 
 class GameEngine(QObject):
@@ -94,12 +93,14 @@ class GameEngine(QObject):
     def main_cycle(self):
         while self.stillRunning() and not self.is_game_started():
             self.thread().msleep(100)
+            print("wait")
         while self.stillRunning() and self.is_game_started():
             self.init_map()
             self.init_food()
             self.update_map()
             self.gameDataSignal.emit((self.map, self.food_position))
             self.thread().msleep(self.tick_time_millis)
+            print("cycle")
 
 
 class GameThread(QThread):
@@ -124,7 +125,7 @@ class GameThread(QThread):
         self.engine.stop()
 
 
-class GameWindow(QMainWindow):
+class GameScene(QWidget):
     def __init__(
         self,
         map_shape: np.ndarray = np.array([25, 25]),
@@ -133,24 +134,14 @@ class GameWindow(QMainWindow):
         tick_time_millis: int = 1000,
         draw_rect_offset: int = 3,
     ):
-        QMainWindow.__init__(self)
+        super().__init__(self)
         self.map_shape = map_shape
         self.pixel_shape = pixel_shape
         self.init_snake_size = init_snake_size
         self.tick_time_millis = tick_time_millis
         self.draw_rect_offset = draw_rect_offset
-        # self.setFixedSize(
-        #   pixel_shape[1] * map_shape[1],
-        #    pixel_shape[0] * map_shape[0],
-        # )
-        self.label = QLabel()
-        canvas = QPixmap(
-            pixel_shape[0] * map_shape[0],
-            pixel_shape[1] * map_shape[1],
-        )
-        canvas.fill(Qt.white)
-        self.label.setPixmap(canvas)
-        self.setCentralWidget(self.label)
+        self.scene_layout = QVBoxLayout()
+        self.setLayout(self.scene_layout)
 
         self.game_thread = GameThread(
             produce_callback=self.redraw_game_graphics,
@@ -159,38 +150,47 @@ class GameWindow(QMainWindow):
             tick_time_millis=tick_time_millis,
         )
         self.game_thread.start()
-        # self.redraw_game_graphics(None)
+
+    def redraw_game_graphics(self, gameData):
+        rect = QGraphicsRectItem(0, 0, 50, 50)
+        rect.setBrush(Qt.red)
+        self.scene_layout.addWidget(rect)
+
+    def sceneInterceptCloseEvent(self, evt):
+        self.game_thread.stop()
+        self.game_thread.wait()
+        evt.accept()
+
+
+class GameWindow(QMainWindow):
+    def __init__(self):
+        QMainWindow.__init__(self)
+        self.scene = GameScene()
+        self.setFixedSize(
+            self.scene.pixel_shape[0] * self.scene.map_shape[0],
+            self.scene.pixel_shape[1] * self.scene.map_shape[1],
+        )
+        self.setCentralWidget(self.scene)
 
     def closeEvent(self, evt):
-        pass
+        self.scene.sceneInterceptCloseEvent(evt)
 
     def keyPressEvent(self, keyEvent: QKeyEvent) -> None:
         super(QMainWindow, self).keyPressEvent(keyEvent)
-        if not self.game_thread.engine.is_game_started():
-            self.game_thread.engine.start_game()
+        print("key")
+        if not self.scene.game_thread.engine.is_game_started():
+            self.scene.game_thread.engine.start_game()
         match keyEvent.key():
             case Qt.Key_D:
-                self.game_thread.engine.set_snake_direction(0)
+                self.scene.game_thread.engine.set_snake_direction(0)
             case Qt.Key_W:
-                self.game_thread.engine.set_snake_direction(1)
+                self.scene.game_thread.engine.set_snake_direction(1)
             case Qt.Key_A:
-                self.game_thread.engine.set_snake_direction(2)
+                self.scene.game_thread.engine.set_snake_direction(2)
             case Qt.Key_S:
-                self.game_thread.engine.set_snake_direction(3)
+                self.scene.game_thread.engine.set_snake_direction(3)
             case Qt.Key_Escape:
-                self.game_thread.stop()
-                self.close()
-
-    def redraw_game_graphics(self, game_data):
-        print(game_data)
-        painter = QPainter(self.label.pixmap())
-        pen = QPen()
-        pen.setWidth(2)
-        pen.setColor(Qt.red)
-        painter.setPen(pen)
-        painter.drawRect(100, 100, 200, 200)
-        painter.end()
-        self.update()
+                self.scene.game_thread.stop()
 
 
 if __name__ == "__main__":
