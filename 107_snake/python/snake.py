@@ -1,4 +1,3 @@
-import random
 import sys
 import numpy as np
 from random import randint
@@ -6,14 +5,10 @@ from random import randint
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
-    QVBoxLayout,
-    QGraphicsRectItem,
-    QWidget,
-    QGraphicsScene,
     QLabel,
 )
 from PyQt5.QtCore import QObject, QThread, QMutex, pyqtSignal, Qt
-from PyQt5.QtGui import QKeyEvent, QPixmap, QPainter, QPen
+from PyQt5.QtGui import QKeyEvent, QPixmap, QPainter
 
 
 class GameEngine(QObject):
@@ -139,10 +134,6 @@ class GameWindow(QMainWindow):
         self.init_snake_size = init_snake_size
         self.tick_time_millis = tick_time_millis
         self.draw_rect_offset = draw_rect_offset
-        # self.setFixedSize(
-        #   pixel_shape[1] * map_shape[1],
-        #    pixel_shape[0] * map_shape[0],
-        # )
         self.label = QLabel()
         canvas = QPixmap(
             pixel_shape[0] * map_shape[0],
@@ -159,7 +150,8 @@ class GameWindow(QMainWindow):
             tick_time_millis=tick_time_millis,
         )
         self.game_thread.start()
-        # self.redraw_game_graphics(None)
+
+        self.map_colors = [Qt.blue, Qt.red]
 
     def closeEvent(self, evt):
         pass
@@ -182,13 +174,26 @@ class GameWindow(QMainWindow):
                 self.close()
 
     def redraw_game_graphics(self, game_data):
-        print(game_data)
         painter = QPainter(self.label.pixmap())
-        pen = QPen()
-        pen.setWidth(2)
-        pen.setColor(Qt.red)
-        painter.setPen(pen)
-        painter.drawRect(100, 100, 200, 200)
+        for i in range(self.map_shape[0]):
+            for j in range(self.map_shape[1]):
+                if self.game_thread.engine.map[i, j] != 0:
+                    painter.fillRect(
+                        i * self.pixel_shape[0] + self.draw_rect_offset,
+                        j * self.pixel_shape[1] + self.draw_rect_offset,
+                        self.pixel_shape[0] - 2 * self.draw_rect_offset,
+                        self.pixel_shape[1] - 2 * self.draw_rect_offset,
+                        Qt.blue,
+                    )
+        painter.fillRect(
+            self.game_thread.engine.food_position[0] * self.pixel_shape[0]
+            + self.draw_rect_offset,
+            self.game_thread.engine.food_position[1] * self.pixel_shape[0]
+            + self.draw_rect_offset,
+            self.pixel_shape[0] - 2 * self.draw_rect_offset,
+            self.pixel_shape[1] - 2 * self.draw_rect_offset,
+            Qt.blue,
+        )
         painter.end()
         self.update()
 
