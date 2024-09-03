@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
     QLabel,
 )
 from PyQt5.QtCore import QObject, QThread, QMutex, pyqtSignal, Qt
-from PyQt5.QtGui import QKeyEvent, QPixmap, QPainter
+from PyQt5.QtGui import QKeyEvent, QPixmap, QPainter, QPen
 
 
 class GameEngine(QObject):
@@ -19,6 +19,7 @@ class GameEngine(QObject):
         map_shape: np.ndarray,
         init_snake_size: int,
         tick_time_millis: int,
+        flag_thoroid: bool,
     ):
         QObject.__init__(self)
         self.game_started = False
@@ -27,15 +28,12 @@ class GameEngine(QObject):
         self.map_shape = map_shape
         self.init_snake_size = init_snake_size
         self.food_position = None
+        self.head_position = None
         self.map = None
         self.snake_size = None
         self.snake_direction = None
         self.tick_time_millis = tick_time_millis
-
-    def stop(self):
-        self.runningLock.lock()
-        self.running = False
-        self.runningLock.unlock()
+        self.flag_thoroid = flag_thoroid
 
     def stillRunning(self):
         self.runningLock.lock()
@@ -54,9 +52,20 @@ class GameEngine(QObject):
         self.runningLock.unlock()
         return value
 
+    def stop_game(self):
+        self.runningLock.lock()
+        self.game_started = False
+        self.runningLock.unlock()
+
     def set_snake_direction(self, dir):
         self.runningLock.lock()
-        self.snake_direction = dir
+        if self.snake_direction != (dir + 2) % 4:
+            self.snake_direction = dir
+        self.runningLock.unlock()
+
+    def stop(self):
+        self.runningLock.lock()
+        self.running = False
         self.runningLock.unlock()
 
     def init_food(self):
@@ -66,7 +75,7 @@ class GameEngine(QObject):
             new_food_position = np.array(
                 [randint(0, self.map_shape[0] - 1), randint(0, self.map_shape[1] - 1)]
             )
-            if self.map[new_food_position[0], new_food_position[1]] != 0:
+            if self.map[*new_food_position] == 0:
                 self.food_position = new_food_position
                 correct_position_found = True
         self.runningLock.unlock()
@@ -75,26 +84,63 @@ class GameEngine(QObject):
         self.runningLock.lock()
         self.map = np.zeros(self.map_shape)
         self.snake_size = self.init_snake_size
+        self.head_position = [self.map_shape[0] // 2, self.map_shape[1] // 2]
         self.snake_direction = 0
-        for i in range(self.snake_size):
-            self.map[self.map_shape[0] // 2 - i, self.map_shape[1] // 2] = (
-                self.init_snake_size - i
-            )
+        self.map[*self.head_position] = self.snake_size
         self.runningLock.unlock()
 
-    def update_map(self):
+    def update_snake(self):
         self.runningLock.lock()
-        self.runningLock.unlock()
+        self.map -= 1
+        self.map = np.maximum(self.map, np.zeros_like(self.map))
+        self.map[*self.head_position] = self.snake_size
+        match self.snake_direction:
+            case 0:
+                self.head_position[0] += 1
+            case 1:
+                self.head_position[1] -= 1
+            case 2:
+                self.head_position[0] -= 1
+            case 3:
+                self.head_position[1] += 1
+        if self.flag_thoroid:
+            self.head_position[0] %= self.map_shape[0]
+            self.head_position[1] %= self.map_shape[1]
+
+        if (
+            self.head_position[0] < 0
+            or self.head_position[0] >= self.map_shape[0]
+            or self.head_position[1] < 0
+            or self.head_position[1] >= self.map_shape[1]
+            or self.map[*self.head_position] != 0
+        ):
+            self.runningLock.unlock()
+            # self.init_map()
+            self.stop_game()
+        else:
+            self.runningLock.unlock()
+
+    def update_food(self):
+        self.runningLock.lock()
+        if np.array_equal(self.food_position, self.head_position):
+            self.snake_size += 1
+            self.runningLock.unlock()
+            self.init_food()
+        else:
+            self.runningLock.unlock()
 
     def main_cycle(self):
-        while self.stillRunning() and not self.is_game_started():
-            self.thread().msleep(100)
-        while self.stillRunning() and self.is_game_started():
+        while self.running:
             self.init_map()
             self.init_food()
-            self.update_map()
-            self.gameDataSignal.emit((self.map, self.food_position))
-            self.thread().msleep(self.tick_time_millis)
+            while self.running and not self.game_started:
+                self.thread().msleep(100)
+                self.gameDataSignal.emit((self.map, self.food_position))
+            while self.running and self.game_started:
+                self.update_snake()
+                self.gameDataSignal.emit((self.map, self.food_position))
+                self.update_food()
+                self.thread().msleep(self.tick_time_millis)
 
 
 class GameThread(QThread):
@@ -104,12 +150,14 @@ class GameThread(QThread):
         map_shape: np.ndarray,
         init_snake_size: int,
         tick_time_millis: int,
+        flag_thoroid: bool,
     ):
         QThread.__init__(self)
         self.engine = GameEngine(
             init_snake_size=init_snake_size,
             map_shape=map_shape,
             tick_time_millis=tick_time_millis,
+            flag_thoroid=flag_thoroid,
         )
         self.engine.moveToThread(self)
         self.started.connect(self.engine.main_cycle)
@@ -125,8 +173,9 @@ class GameWindow(QMainWindow):
         map_shape: np.ndarray = np.array([25, 25]),
         pixel_shape: np.ndarray = np.array([25, 25]),
         init_snake_size: int = 3,
-        tick_time_millis: int = 1000,
+        tick_time_millis: int = 200,
         draw_rect_offset: int = 3,
+        flag_thoroid: bool = True,
     ):
         QMainWindow.__init__(self)
         self.map_shape = map_shape
@@ -148,10 +197,9 @@ class GameWindow(QMainWindow):
             init_snake_size=init_snake_size,
             map_shape=map_shape,
             tick_time_millis=tick_time_millis,
+            flag_thoroid=flag_thoroid,
         )
         self.game_thread.start()
-
-        self.map_colors = [Qt.blue, Qt.red]
 
     def closeEvent(self, evt):
         pass
@@ -174,25 +222,37 @@ class GameWindow(QMainWindow):
                 self.close()
 
     def redraw_game_graphics(self, game_data):
-        painter = QPainter(self.label.pixmap())
-        for i in range(self.map_shape[0]):
-            for j in range(self.map_shape[1]):
-                if self.game_thread.engine.map[i, j] != 0:
+        canvas = self.label.pixmap()
+        canvas.fill(Qt.white)
+        painter = QPainter(canvas)
+        pen = QPen()
+        pen.setColor(Qt.lightGray)
+        painter.setPen(pen)
+        game_map = game_data[0]
+        food_position = game_data[1]
+        for i in range(game_map.shape[0]):
+            for j in range(game_map.shape[1]):
+                if game_map[i, j] != 0:
                     painter.fillRect(
                         i * self.pixel_shape[0] + self.draw_rect_offset,
                         j * self.pixel_shape[1] + self.draw_rect_offset,
                         self.pixel_shape[0] - 2 * self.draw_rect_offset,
                         self.pixel_shape[1] - 2 * self.draw_rect_offset,
-                        Qt.blue,
+                        Qt.darkGreen,
+                    )
+                else:
+                    painter.drawRect(
+                        i * self.pixel_shape[0] + self.draw_rect_offset,
+                        j * self.pixel_shape[1] + self.draw_rect_offset,
+                        self.pixel_shape[0] - 2 * self.draw_rect_offset,
+                        self.pixel_shape[1] - 2 * self.draw_rect_offset,
                     )
         painter.fillRect(
-            self.game_thread.engine.food_position[0] * self.pixel_shape[0]
-            + self.draw_rect_offset,
-            self.game_thread.engine.food_position[1] * self.pixel_shape[0]
-            + self.draw_rect_offset,
+            food_position[0] * self.pixel_shape[0] + self.draw_rect_offset,
+            food_position[1] * self.pixel_shape[0] + self.draw_rect_offset,
             self.pixel_shape[0] - 2 * self.draw_rect_offset,
             self.pixel_shape[1] - 2 * self.draw_rect_offset,
-            Qt.blue,
+            Qt.red,
         )
         painter.end()
         self.update()
