@@ -1,22 +1,22 @@
 import sys
 import numpy as np
 from random import randint
-from scipy.ndimage import convolve
+from scipy.ndimage import convolve, label
 
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
     QLabel,
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QPixmap, QPainter, QPen, QMouseEvent
 
 
 class GameWindow(QMainWindow):
     def __init__(
         self,
-        map_shape: np.ndarray = np.array([25, 25]),
-        mines_count: int = 100,
+        map_shape: np.ndarray = np.array([10, 10]),
+        mines_count: int = 10,
         pixel_shape: np.ndarray = np.array([25, 25]),
         pixel_offset: int = 3,
     ):
@@ -63,12 +63,27 @@ class GameWindow(QMainWindow):
         if self.map[*pos] != 0:
             self.alive = False
         self.opened[*pos] = 1
+        has_not_neighbor_mine = np.zeros_like(self.map)
+        has_not_neighbor_mine[np.where(self.neighbor_map == 0)] = 1
+        labels, _ = label(has_not_neighbor_mine)
+        if labels[*pos] != 0:
+            self.opened[np.where(labels == labels[*pos])] = 1
+            neighbors_to_open = np.zeros_like(self.map)
+            neighbors_to_open[
+                np.where(np.logical_and(labels == labels[*pos], self.map == 0))
+            ] = 1
+            neighbors_to_open = convolve(
+                neighbors_to_open,
+                np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]),
+                mode="constant",
+            )
+            self.opened[np.where(neighbors_to_open != 0)] = 1
+        print("stop here")
         # if map==0 and neighbors==0, calculate all the recursively contiguous cells satisfying the same conditions. Use label
         # then, open these cells and open also the ones with neighbors!=0 next to them, but of course not the map!=0
 
     def mousePressEvent(self, event: QMouseEvent):
-        if event.button() == Qt.LeftButton:
-            self.pressPos = event.pos()
+        self.pressPos = event.pos()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         # ensure that the left button was pressed *and* released within the
@@ -104,14 +119,36 @@ class GameWindow(QMainWindow):
         painter.setPen(pen)
         for i in range(self.map_shape[0]):
             for j in range(self.map_shape[1]):
-                if self.opened[i, j] == 0:  # closed
-                    painter.fillRect(
-                        i * self.pixel_shape[0] + self.pixel_offset,
-                        j * self.pixel_shape[1] + self.pixel_offset,
-                        self.pixel_shape[0] - 2 * self.pixel_offset,
-                        self.pixel_shape[1] - 2 * self.pixel_offset,
-                        Qt.darkGray,
-                    )
+                match self.opened[i, j]:
+                    case 0:  # closed
+                        painter.fillRect(
+                            i * self.pixel_shape[0] + self.pixel_offset,
+                            j * self.pixel_shape[1] + self.pixel_offset,
+                            self.pixel_shape[0] - 2 * self.pixel_offset,
+                            self.pixel_shape[1] - 2 * self.pixel_offset,
+                            Qt.darkGray,
+                        )
+                    case 1:  # opened
+                        if self.neighbor_map[i, j] != 0:
+                            painter.drawText(
+                                QRect(
+                                    i * self.pixel_shape[0] + self.pixel_offset,
+                                    j * self.pixel_shape[1] + self.pixel_offset,
+                                    self.pixel_shape[0] - 2 * self.pixel_offset,
+                                    self.pixel_shape[1] - 2 * self.pixel_offset,
+                                ),
+                                0,
+                                str(int(self.neighbor_map[i, j])),
+                            )
+                    case 2:
+                        painter.fillRect(
+                            i * self.pixel_shape[0] + self.pixel_offset,
+                            j * self.pixel_shape[1] + self.pixel_offset,
+                            self.pixel_shape[0] - 2 * self.pixel_offset,
+                            self.pixel_shape[1] - 2 * self.pixel_offset,
+                            Qt.green,
+                        )
+
         painter.end()
         self.update()
 
