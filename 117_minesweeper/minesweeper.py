@@ -31,6 +31,7 @@ class GameWindow(QMainWindow):
         self.label.setPixmap(canvas)
         self.setCentralWidget(self.label)
         self.alive = True
+        self.win = False
         self.map = None
         self.opened = None  # 0 closed, 1 opened, 2 marked
         self.neighbor_map = None
@@ -82,6 +83,11 @@ class GameWindow(QMainWindow):
         # if map==0 and neighbors==0, calculate all the recursively contiguous cells satisfying the same conditions. Use label
         # then, open these cells and open also the ones with neighbors!=0 next to them, but of course not the map!=0
 
+    def check_win(self):
+        if np.sum(np.logical_and(self.opened == 2, self.map != 0)) == self.mines_count:
+            self.win = True
+            self.alive = False
+
     def mousePressEvent(self, event: QMouseEvent):
         self.pressPos = event.pos()
 
@@ -103,6 +109,7 @@ class GameWindow(QMainWindow):
             else:
                 self.start_game()
                 self.alive = True
+        self.check_win()
         self.pressPos = None
         self.redraw_game_graphics()
 
@@ -111,7 +118,10 @@ class GameWindow(QMainWindow):
         if self.alive:
             canvas.fill(Qt.lightGray)
         else:
-            canvas.fill(Qt.darkRed)
+            if self.win:
+                canvas.fill(Qt.darkGreen)
+            else:
+                canvas.fill(Qt.darkRed)
         painter = QPainter(canvas)
         pen = QPen()
         pen.setWidth(2)
@@ -119,6 +129,12 @@ class GameWindow(QMainWindow):
         painter.setPen(pen)
         for i in range(self.map_shape[0]):
             for j in range(self.map_shape[1]):
+                painter.drawRect(
+                    i * self.pixel_shape[0],
+                    j * self.pixel_shape[1],
+                    self.pixel_shape[0],
+                    self.pixel_shape[1],
+                )
                 match self.opened[i, j]:
                     case 0:  # closed
                         painter.fillRect(
@@ -129,7 +145,7 @@ class GameWindow(QMainWindow):
                             Qt.darkGray,
                         )
                     case 1:  # opened
-                        if self.neighbor_map[i, j] != 0:
+                        if self.neighbor_map[i, j] != 0 and self.map[i, j] == 0:
                             painter.drawText(
                                 QRect(
                                     i * self.pixel_shape[0] + self.pixel_offset,
@@ -139,6 +155,17 @@ class GameWindow(QMainWindow):
                                 ),
                                 0,
                                 str(int(self.neighbor_map[i, j])),
+                            )
+                        elif self.map[i, j] != 0:
+                            painter.drawText(
+                                QRect(
+                                    i * self.pixel_shape[0] + self.pixel_offset,
+                                    j * self.pixel_shape[1] + self.pixel_offset,
+                                    self.pixel_shape[0] - 2 * self.pixel_offset,
+                                    self.pixel_shape[1] - 2 * self.pixel_offset,
+                                ),
+                                0,
+                                "X",
                             )
                     case 2:
                         painter.fillRect(
