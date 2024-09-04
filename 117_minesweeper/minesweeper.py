@@ -15,8 +15,8 @@ from PyQt5.QtGui import QPixmap, QPainter, QPen, QMouseEvent
 class GameWindow(QMainWindow):
     def __init__(
         self,
-        map_shape: np.ndarray = np.array([10, 10]),
-        mines_count: int = 10,
+        map_shape: np.ndarray = np.array([40, 30]),
+        mines_count: int = 50,
         pixel_shape: np.ndarray = np.array([25, 25]),
         pixel_offset: int = 3,
     ):
@@ -36,6 +36,7 @@ class GameWindow(QMainWindow):
         self.opened = None  # 0 closed, 1 opened, 2 marked
         self.neighbor_map = None
         self.start_game()
+        self.redraw_game_graphics()
 
     def start_game(self):
         self.opened = np.zeros(self.map_shape)
@@ -78,7 +79,9 @@ class GameWindow(QMainWindow):
                 np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]),
                 mode="constant",
             )
-            self.opened[np.where(neighbors_to_open != 0)] = 1
+            self.opened[
+                np.where(np.logical_and(neighbors_to_open != 0, self.neighbor_map != 0))
+            ] = 1
         print("stop here")
         # if map==0 and neighbors==0, calculate all the recursively contiguous cells satisfying the same conditions. Use label
         # then, open these cells and open also the ones with neighbors!=0 next to them, but of course not the map!=0
