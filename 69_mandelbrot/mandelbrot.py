@@ -2,6 +2,7 @@ import sys
 import numpy as np
 from random import randint
 from scipy.ndimage import convolve, label
+from time import time
 
 from PyQt5.QtWidgets import (
     QApplication,
@@ -132,7 +133,34 @@ class GameWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    win = GameWindow()
-    win.show()
-    app.exec_()
+    # app = QApplication(sys.argv)
+    # win = GameWindow()
+    # win.show()
+    # app.exec_()
+
+    N = 501
+    vector = np.linspace(-2, 2, N).T
+    real = np.resize(vector, (N, N))
+    comp = np.copy(real).T
+    mat = real + 1j * comp
+
+    include_map = np.ones_like(mat)
+    abs_mat = np.abs(mat)
+    iterMat = np.zeros_like(mat)
+
+    t0 = time()
+    for i in range(20):
+        iterMat[np.where(include_map == 1)] = (
+            np.power(iterMat[np.where(include_map == 1)], 2)
+            + mat[np.where(include_map == 1)]
+        )
+        abs_mat = np.abs(iterMat)
+        include_map[np.where(abs_mat > np.average(abs_mat) * 1.1)] = 0
+    print(time() - t0)
+
+    import matplotlib.pyplot as plt
+
+    plt.pcolormesh(np.abs(iterMat))
+    plt.show()
+
+    print("stop here")

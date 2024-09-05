@@ -15,8 +15,8 @@ class GameEngine(QObject):
     gameDataSignal = pyqtSignal(object)
 
     """
-    1 -> line
-    2 -> square
+    1 -> I
+    2 -> O
     3 -> T
     4 -> S
     5 -> S'
