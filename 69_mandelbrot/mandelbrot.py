@@ -3,98 +3,59 @@ import numpy as np
 from random import randint
 from scipy.ndimage import convolve, label
 from time import time
+from PIL.Image import fromarray
+from PIL.ImageQt import ImageQt
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QLabel,
 )
-from PyQt5.QtCore import Qt, QRect
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QMouseEvent
+from PyQt6.QtCore import Qt, QRect
+from PyQt6.QtGui import QPixmap, QPainter, QPen, QMouseEvent
 
 
 class GameWindow(QMainWindow):
     def __init__(
         self,
-        map_shape: np.ndarray = np.array([10, 10]),
-        mines_count: int = 3,
-        pixel_shape: np.ndarray = np.array([25, 25]),
-        pixel_offset: int = 3,
+        map_size: int = 501,
+        real_range: np.ndarray = np.array([-1, 1]),
+        comp_range: np.ndarray = np.array([-1, 1]),
     ):
         QMainWindow.__init__(self)
-        self.map_shape = map_shape
-        self.mines_count = mines_count
-        self.pixel_shape = pixel_shape
-        self.pixel_offset = pixel_offset
+        self.map_size = map_size
+        self.real_range = real_range
+        self.comp_range = comp_range
+        self.map = None
+        self.qt_image = None
         self.label = QLabel()
-        canvas = QPixmap(*(map_shape * pixel_shape))
-        canvas.fill(Qt.lightGray)
+        canvas = QPixmap(map_size, map_size)
+
         self.label.setPixmap(canvas)
         self.setCentralWidget(self.label)
-        self.alive = True
-        self.win = False
-        self.map = None
-        self.opened = None  # 0 closed, 1 opened, 2 marked
-        self.neighbor_map = None
-        self.start_game()
-        self.redraw_game_graphics()
+        self.render_fractal()
+        self.redraw_mandelbrot_graphics()
 
-    def start_game(self):
-        self.opened = np.zeros(self.map_shape)
-        self.map = np.zeros_like(self.opened)
-        self.neighbor_map = np.zeros_like(self.opened)
-        mines_ind = 0
-        while mines_ind < self.mines_count:
-            candidate_pos = np.array(
-                [randint(0, self.map_shape[0] - 1), randint(0, self.map_shape[1] - 1)]
-            )
-            if self.map[*candidate_pos] == 0:
-                self.map[*candidate_pos] = 1
-                mines_ind += 1
-        self.neighbor_map = convolve(
-            self.map, np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]), mode="constant"
-        )
+    def render_fractal(self):
+        real_arr = np.linspace(*self.real_range, self.map_size).T
+        comp_arr = np.linspace(*self.comp_range, self.map_size)
+        real = np.resize(real_arr, (self.map_size, self.map_size))
+        comp = np.resize(comp_arr, (self.map_size, self.map_size)).T
+        mat = real + 1j * comp
 
-    def mark_position(self, pos):
-        self.opened[*pos] = (
-            2
-            if self.opened[*pos] == 0
-            else (0 if self.opened[*pos] == 2 else self.opened[*pos])
-        )
+        include_map = np.ones_like(mat)
+        abs_mat = np.abs(mat)
+        iterMat = np.zeros_like(mat)
 
-    def touch_position(self, pos):
-        if self.map[*pos] != 0:
-            self.alive = False
-        self.opened[*pos] = 1
-        has_not_neighbor_mine = np.zeros_like(self.map)
-        has_not_neighbor_mine[np.where(self.neighbor_map == 0)] = 1
-        labels, _ = label(has_not_neighbor_mine)
-        if labels[*pos] != 0:
-            self.opened[np.where(labels == labels[*pos])] = 1
-            neighbors_to_open = np.zeros_like(self.map)
-            neighbors_to_open[
-                np.where(np.logical_and(labels == labels[*pos], self.map == 0))
-            ] = 1
-            neighbors_to_open = convolve(
-                neighbors_to_open,
-                np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]),
-                mode="constant",
-            )
-            self.opened[
-                np.where(np.logical_and(neighbors_to_open != 0, self.neighbor_map != 0))
-            ] = 1
-        print("stop here")
-        # if map==0 and neighbors==0, calculate all the recursively contiguous cells satisfying the same conditions. Use label
-        # then, open these cells and open also the ones with neighbors!=0 next to them, but of course not the map!=0
-
-    def check_win(self):
-        if (
-            np.sum(np.logical_and(self.opened == 2, self.map != 0)) == self.mines_count
-            or np.sum(self.opened == 1)
-            == self.map_shape[0] * self.map_shape[1] - self.mines_count
-        ):
-            self.win = True
-            self.alive = False
+        for i in range(100):
+            indexes = np.where(include_map == 1)
+            iterMat[indexes] = np.power(iterMat[indexes], 2) + mat[indexes]
+            abs_mat = np.abs(iterMat)
+            include_map[np.where(abs_mat > np.average(abs_mat) + np.std(abs_mat))] = 0
+        # final_abs_mat = np.abs(iterMat)
+        abs_mat[np.isnan(abs_mat)] = 0
+        arrImg = fromarray(abs_mat / np.max(abs_mat), mode="r")
+        self.qt_image = ImageQt(arrImg)
 
     def mousePressEvent(self, event: QMouseEvent):
         self.pressPos = event.pos()
@@ -102,42 +63,35 @@ class GameWindow(QMainWindow):
     def mouseReleaseEvent(self, event: QMouseEvent):
         # ensure that the left button was pressed *and* released within the
         # geometry of the widget; if so, emit the signal;
-        if self.pressPos is not None and event.pos() in self.label.rect():
-            if self.alive:
-                press_index = np.array(
-                    [
-                        int(self.pressPos.x() / self.pixel_shape[0]),
-                        int(self.pressPos.y() / self.pixel_shape[1]),
-                    ]
-                )
-                if event.button() == Qt.LeftButton:
-                    self.touch_position(press_index)
-                elif event.button() == Qt.RightButton:
-                    self.mark_position(press_index)
-            else:
-                self.start_game()
-                self.alive = True
-        self.check_win()
-        self.pressPos = None
-        self.redraw_game_graphics()
+        # if self.pressPos is not None and event.pos() in self.label.rect():
+        #     if self.alive:
+        #         press_index = np.array(
+        #             [
+        #                 int(self.pressPos.x() / self.pixel_shape[0]),
+        #                 int(self.pressPos.y() / self.pixel_shape[1]),
+        #             ]
+        #         )
+        #         if event.button() == Qt.LeftButton:
+        #             self.touch_position(press_index)
+        #         elif event.button() == Qt.RightButton:
+        #             self.mark_position(press_index)
+        #     else:
+        #         self.render_fractal()
+        #         self.alive = True
+        # self.check_win()
+        # self.pressPos = None
+        # self.redraw_mandelbrot_graphics()
+        pass
 
-    def redraw_game_graphics(self):
-        canvas = self.label.pixmap()
-        painter = QPainter(canvas)
-        pen = QPen()
-        pen.setWidth(2)
-        pen.setColor(Qt.darkGray)
-        painter.setPen(pen)
-        painter.end()
+    def redraw_mandelbrot_graphics(self):
+        # canvas = self.label.pixmap()
+        # painter = QPainter(canvas)
+        self.label.setPixmap(QPixmap.fromImage(self.qt_image))
+        # painter.end()
         self.update()
 
 
-if __name__ == "__main__":
-    # app = QApplication(sys.argv)
-    # win = GameWindow()
-    # win.show()
-    # app.exec_()
-
+def test_plot():
     N = 501
     real_range = np.linspace(-1, 1, N).T
     comp_range = np.linspace(-1, 1, N)
@@ -160,7 +114,12 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     plt.pcolormesh(np.abs(iterMat))
-
     plt.show()
 
-    print("stop here")
+
+if __name__ == "__main__":
+    # test_plot()
+    app = QApplication(sys.argv)
+    win = GameWindow()
+    win.show()
+    app.exec()
