@@ -139,9 +139,10 @@ if __name__ == "__main__":
     # app.exec_()
 
     N = 501
-    vector = np.linspace(-2, 2, N).T
-    real = np.resize(vector, (N, N))
-    comp = np.copy(real).T
+    real_range = np.linspace(-1, 1, N).T
+    comp_range = np.linspace(-1, 1, N)
+    real = np.resize(real_range, (N, N))
+    comp = np.resize(comp_range, (N, N)).T
     mat = real + 1j * comp
 
     include_map = np.ones_like(mat)
@@ -149,18 +150,17 @@ if __name__ == "__main__":
     iterMat = np.zeros_like(mat)
 
     t0 = time()
-    for i in range(20):
-        iterMat[np.where(include_map == 1)] = (
-            np.power(iterMat[np.where(include_map == 1)], 2)
-            + mat[np.where(include_map == 1)]
-        )
+    for i in range(100):
+        indexes = np.where(include_map == 1)
+        iterMat[indexes] = np.power(iterMat[indexes], 2) + mat[indexes]
         abs_mat = np.abs(iterMat)
-        include_map[np.where(abs_mat > np.average(abs_mat) * 1.1)] = 0
+        include_map[np.where(abs_mat > np.average(abs_mat) + np.std(abs_mat))] = 0
     print(time() - t0)
 
     import matplotlib.pyplot as plt
 
     plt.pcolormesh(np.abs(iterMat))
+
     plt.show()
 
     print("stop here")
