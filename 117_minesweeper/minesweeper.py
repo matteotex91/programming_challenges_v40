@@ -15,8 +15,8 @@ from PyQt5.QtGui import QPixmap, QPainter, QPen, QMouseEvent
 class GameWindow(QMainWindow):
     def __init__(
         self,
-        map_shape: np.ndarray = np.array([40, 30]),
-        mines_count: int = 50,
+        map_shape: np.ndarray = np.array([10, 10]),
+        mines_count: int = 3,
         pixel_shape: np.ndarray = np.array([25, 25]),
         pixel_offset: int = 3,
     ):
@@ -87,7 +87,11 @@ class GameWindow(QMainWindow):
         # then, open these cells and open also the ones with neighbors!=0 next to them, but of course not the map!=0
 
     def check_win(self):
-        if np.sum(np.logical_and(self.opened == 2, self.map != 0)) == self.mines_count:
+        if (
+            np.sum(np.logical_and(self.opened == 2, self.map != 0)) == self.mines_count
+            or np.sum(self.opened == 1)
+            == self.map_shape[0] * self.map_shape[1] - self.mines_count
+        ):
             self.win = True
             self.alive = False
 
