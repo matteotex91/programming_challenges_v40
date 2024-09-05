@@ -3,22 +3,30 @@ import numpy as np
 from random import randint
 from scipy.ndimage import convolve, label
 from time import time
-from PIL.Image import fromarray
-from PIL.ImageQt import ImageQt
+from matplotlib import colormaps
 
-from PyQt6.QtWidgets import (
+
+from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
     QLabel,
 )
-from PyQt6.QtCore import Qt, QRect
-from PyQt6.QtGui import QPixmap, QPainter, QPen, QMouseEvent
+from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtGui import (
+    QPixmap,
+    QPainter,
+    QPen,
+    QMouseEvent,
+    QColor,
+    QImage,
+    QWheelEvent,
+)
 
 
 class GameWindow(QMainWindow):
     def __init__(
         self,
-        map_size: int = 501,
+        map_size: int = 500,
         real_range: np.ndarray = np.array([-1, 1]),
         comp_range: np.ndarray = np.array([-1, 1]),
     ):
@@ -28,6 +36,7 @@ class GameWindow(QMainWindow):
         self.comp_range = comp_range
         self.map = None
         self.qt_image = None
+        self.setFixedSize(map_size, map_size)
         self.label = QLabel()
         canvas = QPixmap(map_size, map_size)
 
@@ -47,46 +56,98 @@ class GameWindow(QMainWindow):
         abs_mat = np.abs(mat)
         iterMat = np.zeros_like(mat)
 
-        for i in range(100):
+        for i in range(20):
             indexes = np.where(include_map == 1)
             iterMat[indexes] = np.power(iterMat[indexes], 2) + mat[indexes]
             abs_mat = np.abs(iterMat)
             include_map[np.where(abs_mat > np.average(abs_mat) + np.std(abs_mat))] = 0
-        # final_abs_mat = np.abs(iterMat)
         abs_mat[np.isnan(abs_mat)] = 0
-        arrImg = fromarray(abs_mat / np.max(abs_mat), mode="r")
-        self.qt_image = ImageQt(arrImg)
+        hue = abs_mat / np.max(abs_mat)
+        cmap = colormaps["hsv"]
+        self.rgb_image = np.uint8(256 * cmap(hue)[..., :3])
+
+    def wheelEvent(self, event: QWheelEvent):
+        # mouse_x = event.pos().y()
+        # mouse_y = event.pos().x()
+        # mouse_pos = np.array(
+        #    [
+        #        mouse_x * (self.real_range[1] - self.real_range[0]) / self.map_size,
+        #        mouse_y * (self.comp_range[1] - self.comp_range[0]) / self.map_size,
+        #    ]
+        # )
+        # if event.angleDelta().y() > 0:
+        #    self.real_range = mouse_pos[0] + 1.1 * (self.real_range - mouse_pos[0])
+        #    self.comp_range = mouse_pos[1] + 1.1 * (self.comp_range - mouse_pos[1])
+        # else:
+        #    self.real_range = mouse_pos[0] + 0.9 * (self.real_range - mouse_pos[0])
+        #    self.comp_range = mouse_pos[1] + 0.9 * (self.comp_range - mouse_pos[1])
+        # self.render_fractal()
+        # self.redraw_mandelbrot_graphics()
+        ...
 
     def mousePressEvent(self, event: QMouseEvent):
-        self.pressPos = event.pos()
+        mouse_x = event.pos().y()
+        mouse_y = event.pos().x()
+        mouse_pos = np.array(
+            [
+                self.real_range[0]
+                + mouse_x * (self.real_range[1] - self.real_range[0]) / self.map_size,
+                self.comp_range[0]
+                + mouse_y * (self.comp_range[1] - self.comp_range[0]) / self.map_size,
+            ]
+        )
+        if event.button() == Qt.LeftButton:
+            self.real_range = mouse_pos[0] + 1.1 * (self.real_range - mouse_pos[0])
+            self.comp_range = mouse_pos[1] + 1.1 * (self.comp_range - mouse_pos[1])
+        else:
+            self.real_range = mouse_pos[0] + 0.9 * (self.real_range - mouse_pos[0])
+            self.comp_range = mouse_pos[1] + 0.9 * (self.comp_range - mouse_pos[1])
+        self.render_fractal()
+        self.redraw_mandelbrot_graphics()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
-        # ensure that the left button was pressed *and* released within the
-        # geometry of the widget; if so, emit the signal;
-        # if self.pressPos is not None and event.pos() in self.label.rect():
-        #     if self.alive:
-        #         press_index = np.array(
-        #             [
-        #                 int(self.pressPos.x() / self.pixel_shape[0]),
-        #                 int(self.pressPos.y() / self.pixel_shape[1]),
-        #             ]
-        #         )
-        #         if event.button() == Qt.LeftButton:
-        #             self.touch_position(press_index)
-        #         elif event.button() == Qt.RightButton:
-        #             self.mark_position(press_index)
-        #     else:
-        #         self.render_fractal()
-        #         self.alive = True
-        # self.check_win()
+        # if (
+        #    self.pressPos is not None
+        #    and event.pos() in self.label.rect()
+        #    and event.button() == Qt.LeftButton
+        # ):
+        #    y0 = min(self.pressPos.x(), event.pos().x())
+        #    y1 = max(self.pressPos.x(), event.pos().x())
+        #    x0 = min(self.pressPos.y(), event.pos().y())
+        #    x1 = max(self.pressPos.y(), event.pos().y())
+        #
+        #    xr0 = x0 * (self.real_range[1] - self.real_range[0]) / self.map_size
+        #    xr1 = x1 * (self.real_range[1] - self.real_range[0]) / self.map_size
+        #    yr0 = y0 * (self.comp_range[1] - self.comp_range[0]) / self.map_size
+        #    yr1 = y1 * (self.comp_range[1] - self.comp_range[0]) / self.map_size
+        #
+        #    self.real_range = np.array([xr0, xr1])
+        #    self.comp_range = np.array([yr0, yr1])
+
+        # self.real_range = np.array([-2, 2])
+        # self.comp_range = np.array([-2, 2])
+        #
         # self.pressPos = None
+        # self.render_fractal()
         # self.redraw_mandelbrot_graphics()
-        pass
+        ...
 
     def redraw_mandelbrot_graphics(self):
         # canvas = self.label.pixmap()
         # painter = QPainter(canvas)
-        self.label.setPixmap(QPixmap.fromImage(self.qt_image))
+        # self.label.setPixmap(
+        #    QPixmap.fromImage(self.qt_image, QImage.Format.Format_RGB888)
+        # )
+        self.label.setPixmap(
+            QPixmap(
+                QImage(
+                    self.rgb_image,
+                    self.map_size,
+                    self.map_size,
+                    QImage.Format.Format_RGB888,
+                )
+            )
+        )
         # painter.end()
         self.update()
 
@@ -118,7 +179,7 @@ def test_plot():
 
 
 if __name__ == "__main__":
-    # test_plot()
+    #  test_plot()
     app = QApplication(sys.argv)
     win = GameWindow()
     win.show()
