@@ -1,7 +1,5 @@
 import sys
 import numpy as np
-from random import randint
-from scipy.ndimage import convolve, label
 from time import time
 from matplotlib import colormaps
 
@@ -11,13 +9,10 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QLabel,
 )
-from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import (
     QPixmap,
-    QPainter,
-    QPen,
     QMouseEvent,
-    QColor,
     QImage,
     QWheelEvent,
 )
@@ -86,14 +81,15 @@ class GameWindow(QMainWindow):
         ...
 
     def mousePressEvent(self, event: QMouseEvent):
-        mouse_x = event.pos().y()
-        mouse_y = event.pos().x()
+        mouse_x = event.pos().x()
+        mouse_y = event.pos().y()
+
         mouse_pos = np.array(
             [
                 self.real_range[0]
-                + mouse_x * (self.real_range[1] - self.real_range[0]) / self.map_size,
+                + (mouse_x) * (self.real_range[1] - self.real_range[0]) / self.map_size,
                 self.comp_range[0]
-                + mouse_y * (self.comp_range[1] - self.comp_range[0]) / self.map_size,
+                + (mouse_y) * (self.comp_range[1] - self.comp_range[0]) / self.map_size,
             ]
         )
         if event.button() == Qt.LeftButton:
