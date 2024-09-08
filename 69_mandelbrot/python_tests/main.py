@@ -166,13 +166,22 @@ add_const = 0.05
 
 def replot():
     abs_list = []
+    re_list = []
+    cx_list = []
     ax.clear()
     z = 0
     for i in range(100):
         abs_list.append(np.abs(z))
+        re_list.append(np.real(z))
+        cx_list.append(np.imag(z))
         z = np.power(z, 2) + comp_num
+
     plt.cla()
-    ax.plot(abs_list)
+    ax.scatter(re_list, cx_list)
+    ax.scatter(np.real(comp_num), np.imag(comp_num), color="red")
+    ax.scatter(np.real(np.sqrt(comp_num)), np.imag(np.sqrt(comp_num)), color="green")
+    # ax.plot(abs_list)
+    # ax.plot(abs_list)
     fig.show()
     # plt.show()
 
@@ -209,5 +218,5 @@ def convergence_plot():
 
 if __name__ == "__main__":
     # test_plot()
-    # convergence_plot()
-    interactive_plot()
+    convergence_plot()
+    # interactive_plot()
