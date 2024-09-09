@@ -44,6 +44,7 @@ class Sudoku:
                     self.data[*empty_coord] = avl_num_list[0]
                     fill_list.append(empty_coord)
                     still_running = True
+                    break
                 elif len(avl_num_list) == 0:
                     return fill_list, False
         return fill_list, True
@@ -58,47 +59,25 @@ class Sudoku:
     """
 
     def solve(self):
-        running = True
-        while running:
-            running = False
-            fill_list, consist = self.fill_determined_numbers()
-            if not consist:
-                # rollback
-                for pos in fill_list:
-                    self.data[*pos] = 0
-                # inconsistent
-                return False
-            if np.sum(self.data == 0) == 0:
-                print("solved")
+        fill_list, consist = self.fill_determined_numbers()
+        if not consist:
+            for pos in fill_list:  # rollback
+                self.data[*pos] = 0
+            return False
+        if np.sum(self.data == 0) == 0:  # found solution
+            return True
+        pos = np.transpose(np.where(self.data == 0))[0]
+        num_list_at_pos = self.available_number_list(pos)
+        for num in num_list_at_pos:
+            print(str(pos) + " -> " + str(num))
+            self.data[*pos] = num
+            solved = self.solve()
+            if solved:
                 return True
-            # at this point, the sudoku requires to guess
-            undetermined_positions = np.transpose(np.where(self.data == 0))
-
-            undetermined_positions_count = [
-                len(self.available_number_list(pos)) for pos in undetermined_positions
-            ]
-            sorted_undetermined_positions = [
-                pos
-                for _, pos in sorted(
-                    zip(undetermined_positions_count, undetermined_positions.tolist())
-                )
-            ]
-            for pos in sorted_undetermined_positions:
-                for num in self.available_number_list(pos):
-                    self.data[*pos] = num
-                    consistent = self.solve()
-                    if not consistent:
-                        self.data[*pos] = 0
-                    else:
-                        if np.sum(self.data == 0) == 0:
-                            return True
-                        else:
-                            running = True
-                            break
-            if not running:
-                # deeply inconsistent sudoku
-                return False
-        return True
+            else:
+                self.data[*pos] = 0
+                print(str(pos) + " -> " + str(0))
+        return False
 
 
 if __name__ == "__main__":
@@ -120,15 +99,15 @@ if __name__ == "__main__":
     # print(consist)
     s.data = np.array(
         [
-            [0, 5, 0, 3, 0, 2, 0, 8, 0],
-            [0, 0, 0, 0, 8, 0, 0, 0, 0],
-            [0, 2, 0, 1, 0, 9, 0, 7, 0],
-            [6, 0, 0, 0, 0, 0, 0, 0, 5],
-            [0, 0, 4, 2, 0, 3, 7, 0, 0],
-            [9, 8, 0, 0, 0, 0, 0, 1, 3],
-            [0, 4, 0, 0, 0, 0, 0, 2, 0],
-            [0, 0, 1, 9, 0, 4, 6, 0, 0],
-            [0, 0, 5, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 3, 0, 2, 0],
+            [0, 0, 9, 2, 0, 0, 3, 0, 0],
+            [3, 0, 0, 0, 0, 0, 0, 0, 7],
+            [0, 0, 5, 0, 0, 0, 0, 3, 2],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
         ]
     )
     print(s.solve())
