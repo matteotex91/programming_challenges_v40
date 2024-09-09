@@ -38,17 +38,17 @@ class Sudoku:
 
     def fill_determined_numbers(self):
         fill_list = []
-        still_running = True
+        still_running = True  # This flag is needed to iterate the soft solve until no more numbers are found
         while still_running:
             still_running = False
             for empty_coord in np.transpose(np.where(self.data == 0)):
                 avl_num_list = self.available_number_list(empty_coord)
-                if len(avl_num_list) == 1:
+                if len(avl_num_list) == 1:  # if only one number available, insert it
                     self.data[*empty_coord] = avl_num_list[0]
                     fill_list.append(empty_coord)
-                    still_running = True
+                    still_running = True  # trigger soft solution again and restart
                     break
-                elif len(avl_num_list) == 0:
+                elif len(avl_num_list) == 0:  # error detection for rollback
                     return fill_list, False
         return fill_list, True
 
@@ -59,24 +59,24 @@ class Sudoku:
     """
 
     def solve(self):
-        fill_list, consist = self.fill_determined_numbers()
-        if not consist:
-            for pos in fill_list:  # rollback
+        fill_list, consist = self.fill_determined_numbers()  # try soft solution
+        if not consist:  # error detected, rollback erasing cells and return False
+            for pos in fill_list:
                 self.data[*pos] = 0
             return False
-        if np.sum(self.data == 0) == 0:  # found solution
+        if np.sum(self.data == 0) == 0:  # solution found, return True
             return True
-        pos = np.transpose(np.where(self.data == 0))[0]
-        for num in self.available_number_list(pos):
+        pos = np.transpose(np.where(self.data == 0))[0]  # pick the first empty cell
+        for num in self.available_number_list(pos):  # cycle over the available numbers
             print(str(pos) + " -> " + str(num))
-            self.data[*pos] = num
-            solved = self.solve()
-            if solved:
+            self.data[*pos] = num  # set the number in the cell
+            solved = self.solve()  # go recursively
+            if solved:  # if solution found, go back with True
                 return True
-            else:
+            else:  # otherwise, rollback and continue with the cycle
                 self.data[*pos] = 0
                 print(str(pos) + " -> " + str(0))
-        return False
+        return False  # if none of the available numbers is ok, then it's unsolvable
 
 
 if __name__ == "__main__":
