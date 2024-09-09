@@ -13,6 +13,7 @@ cx1 = 1
 add_const = 0.05
 zoom_const = 1.1
 N = 250
+max_iteration = 50
 
 
 def replot_fractal():
@@ -216,7 +217,106 @@ def convergence_plot():
     fig.canvas.mpl_disconnect(conn_id)
 
 
+def replot_transform():
+    global re0, re1, cx0, cx1, max_iteration
+    N = 50
+    real_range = np.linspace(re0, re1, N).T
+    comp_range = np.linspace(cx0, cx1, N)
+    real = np.resize(real_range, (N, N))
+    comp = np.resize(comp_range, (N, N)).T
+    mat = real + 1j * comp
+
+    include_map = np.ones_like(mat)
+    abs_mat = np.abs(mat)
+    iterMat = np.zeros_like(mat)
+    new_divergent_numbers = 1
+
+    for i in range(max_iteration):
+        indexes = np.where(include_map == 1)
+        iterMat[indexes] = np.power(iterMat[indexes], 2) + mat[indexes]
+        abs_mat = np.abs(iterMat)
+        new_divergent_numbers = np.sum(
+            np.where(
+                np.logical_and(
+                    abs_mat > np.average(abs_mat) + np.std(abs_mat), include_map == 1
+                )
+            )
+        )
+        include_map[
+            np.where(
+                np.logical_and(
+                    abs_mat > np.average(abs_mat) + np.std(abs_mat), include_map == 1
+                )
+            )
+        ] = 0
+    ax.clear()
+    ax.scatter(
+        np.real(np.reshape(iterMat, (1, -1))),
+        np.imag(np.reshape(iterMat, (1, -1))),
+        color="red",
+    )
+    ax.scatter(
+        np.real(np.reshape(mat, (1, -1))),
+        np.imag(np.reshape(mat, (1, -1))),
+        color="blue",
+    )
+
+    fig.show()
+
+
+def interactive_transform_plot():
+    global fig, ax
+    fig, ax = plt.subplots()
+
+    def on_release(event: KeyEvent):
+        global re0, re1, cx0, cx1, add_const, zoom_const, max_iteration
+        print(event.key)
+        match event.key:
+            case "right":
+                re0 += add_const
+                re1 += add_const
+            case "up":
+                cx0 += add_const
+                cx1 += add_const
+            case "down":
+                cx0 -= add_const
+                cx1 -= add_const
+            case "left":
+                re0 -= add_const
+                re1 -= add_const
+            case "-":
+                max_iteration -= 1
+            case "+":
+                max_iteration += 1
+            case "z":
+                new_re0 = (re1 + re0) / 2 - (re1 - re0) / 2 / zoom_const
+                new_re1 = (re1 + re0) / 2 + (re1 - re0) / 2 / zoom_const
+                new_cx0 = (cx1 + cx0) / 2 - (cx1 - cx0) / 2 / zoom_const
+                new_cx1 = (cx1 + cx0) / 2 + (cx1 - cx0) / 2 / zoom_const
+                re0 = new_re0
+                re1 = new_re1
+                cx0 = new_cx0
+                cx1 = new_cx1
+
+            case "x":
+                new_re0 = (re1 + re0) / 2 - (re1 - re0) / 2 * zoom_const
+                new_re1 = (re1 + re0) / 2 + (re1 - re0) / 2 * zoom_const
+                new_cx0 = (cx1 + cx0) / 2 - (cx1 - cx0) / 2 * zoom_const
+                new_cx1 = (cx1 + cx0) / 2 + (cx1 - cx0) / 2 * zoom_const
+                re0 = new_re0
+                re1 = new_re1
+                cx0 = new_cx0
+                cx1 = new_cx1
+        replot_transform()
+
+    replot_transform()
+    conn_id = fig.canvas.mpl_connect("key_release_event", on_release)
+    plt.show()
+    fig.canvas.mpl_disconnect(conn_id)
+
+
 if __name__ == "__main__":
     # test_plot()
-    convergence_plot()
+    # convergence_plot()
     # interactive_plot()
+    interactive_transform_plot()
