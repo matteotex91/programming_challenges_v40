@@ -1,8 +1,10 @@
 import sys
+
+from n_72_sudoku_solver.sudoku import Sudoku
 import numpy as np
 from random import randint
 from scipy.ndimage import convolve, label
-from WIP.72_sudoku_solver.sudoku import Sudoku
+
 
 from PyQt5.QtWidgets import (
     QApplication,
