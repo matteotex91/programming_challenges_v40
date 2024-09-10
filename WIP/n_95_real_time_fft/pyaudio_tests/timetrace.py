@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 from time import sleep, time
 import scipy.signal as signal
 
+"""This script acquires 100 callbacks saving only the raw data.
+Then plots timetrace and zero padded rfft
+"""
+
+
 fulldata = np.array([], dtype=np.int16)
 fftdata = np.array([], dtype=np.int16)
 time_0 = []
