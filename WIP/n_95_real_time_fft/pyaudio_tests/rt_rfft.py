@@ -1,8 +1,7 @@
 import numpy as np
 import pyaudio
 import matplotlib.pyplot as plt
-from time import sleep, time
-import scipy.signal as signal
+from time import sleep
 
 """This script acquires 100 callbacks performing immediately the fft of the chunk
 Then the timetrace of the rfft is plotted as colormesh only in the audible range
