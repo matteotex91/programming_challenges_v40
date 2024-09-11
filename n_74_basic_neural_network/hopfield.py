@@ -25,10 +25,29 @@ class HopfieldNetwork:
             state = np.sign(np.dot(self.W, state))
         return np.array(state_arr), np.array(energy_arr), np.array(overlaps)
 
+    def relax_state_synchro_autodetect_convergence(self, state: np.ndarray):
+        energy_arr = []
+        state_arr = []
+        overlaps = []
+        running = True
+        while running:
+            newstate = np.sign(np.dot(self.W, state))
+            running = not np.array_equal(newstate, state)
+            state = newstate
+            overlaps.append(
+                np.array([np.dot(state, pattern) for pattern in self.init_patterns])
+                / self.N
+            )
+            energy_arr.append(-0.5 * np.dot(np.dot(self.W, state), state))
+            state_arr.append(np.copy(state))
+        return np.array(state_arr), np.array(energy_arr), np.array(overlaps)
+
 
 if __name__ == "__main__":
     h = HopfieldNetwork(
         np.array([[1, -1, -1, -1, -1, -1, -1, -1], [-1, -1, 1, -1, -1, -1, -1, -1]])
     )
-    s, e, o = h.relax_state_synchro(np.array([1, 1, -1, -1, -1, -1, -1, 1]), 100)
+    s, e, o = h.relax_state_synchro_autodetect_convergence(
+        np.array([1, 1, -1, -1, -1, -1, -1, 1])
+    )
     print("stop here")
