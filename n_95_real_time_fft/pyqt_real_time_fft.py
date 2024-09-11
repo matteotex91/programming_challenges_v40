@@ -1,36 +1,22 @@
 import pyqtgraph as pg
 import pyaudio
 from PyQt5.QtWidgets import QMainWindow, QApplication
-from PyQt5.QtCore import pyqtSignal, QEvent, QThread
+from PyQt5.QtCore import pyqtSignal, QEvent, QThread, QObject, QMutex
 from PyQt5.QtGui import QMouseEvent
 import sys
 import numpy as np
 from time import sleep
 
 
-class AudioListener(QThread):
-    fft_signal = pyqtSignal(object)
-
-    def __init__(self, main_window):
-        QThread.__init__(self)
-        self.fft_signal.connect(main_window.replot_fft)
-        self.started.connect(main_window.start_acquisition)
-
-
-class MainWindow(QMainWindow):
-    count = 0
+class ListenerTask(QObject):
+    fft_data_signal = pyqtSignal(object)
 
     def __init__(self):
-        super().__init__()
-        # Temperature vs time plot
-        self.plot_graph = pg.PlotWidget()
-        self.setCentralWidget(self.plot_graph)
-        # self.fft_signal.connect(self.replot_fft)
-        self.show()
-        self.al = AudioListener(self)
+        QObject.__init__(self)
+        self.running = True
+        self.runningLock = QMutex()
 
-    def start_acquisition(self):
-        self.count = 100
+    def acquire(self):
         FORMAT = pyaudio.paInt16
         CHANNELS = 1
         RATE = 44100
@@ -48,16 +34,15 @@ class MainWindow(QMainWindow):
             freq = n / T
             min_freq_ind = np.argmin(np.abs(freq - 20))
             max_freq_ind = np.argmin(np.abs(freq - 20000))
-            self.fft_signal.emit(
+            self.fft_data_signal.emit(
                 [
                     freq[min_freq_ind:max_freq_ind],
                     np.abs(fft[min_freq_ind:max_freq_ind]),
                 ]
             )
-            self.count -= 1
             return (
                 audio_data,
-                pyaudio.paContinue if self.count > 0 else pyaudio.paAbort,
+                pyaudio.paContinue if self.running > 0 else pyaudio.paAbort,
             )
 
         stream = audio.open(
@@ -68,15 +53,42 @@ class MainWindow(QMainWindow):
             stream_callback=callback,
             frames_per_buffer=CHUNK,
         )
-        while self.count > 0:
+        while self.running:
             sleep(0.1)
+
+    def stop(self):
+        self.runningLock.lock()
+        self.running = False
+        self.runningLock.unlock()
+
+
+class AudioListenerThread(QThread):
+    def __init__(self, callback_function):
+        QThread.__init__(self)
+        self.task = ListenerTask()
+        self.task.moveToThread(self)
+        self.started.connect(self.task.acquire)
+        self.task.fft_data_signal.connect(callback_function)
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.plot_graph = pg.PlotWidget()
+        self.setCentralWidget(self.plot_graph)
+        self.acquire_thread = AudioListenerThread(self.replot_fft)
 
     def replot_fft(self, fft_signal):
         self.plot_graph.clear()
-        self.plot_graph.plot(fft_signal[0], fft_signal[1])
+
+        self.plot_graph.plot(fft_signal[0], fft_signal[1] / max(fft_signal[1]))
+
+    def closeEvent(self, evt):
+        self.acquire_thread.task.stop()
 
 
 app = QApplication(sys.argv)
 main = MainWindow()
 main.show()
+main.acquire_thread.start()
 app.exec()
