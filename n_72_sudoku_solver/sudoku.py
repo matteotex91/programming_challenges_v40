@@ -1,4 +1,5 @@
 import numpy as np
+from time import time
 
 
 class Sudoku:
@@ -80,6 +81,9 @@ class Sudoku:
 
 
 if __name__ == "__main__":
+
+    t0 = time()
+
     s = Sudoku()
     s.data = np.array(
         [
@@ -96,3 +100,4 @@ if __name__ == "__main__":
     )
     print(s.solve())
     print(s.data)
+    print(time() - t0)
