@@ -19,7 +19,7 @@ class GameWindow(QMainWindow):
     def __init__(
         self,
         map_shape: np.ndarray = np.array([10, 10]),
-        mines_count: int = 3,
+        mines_count: int = 10,
         pixel_shape: np.ndarray = np.array([25, 25]),
         pixel_offset: int = 3,
     ):
