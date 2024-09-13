@@ -16,13 +16,14 @@ from PyQt5.QtGui import QPixmap, QPainter, QPen, QKeyEvent
 class GameWindow(QMainWindow):
     def __init__(
         self,
-        pixel_shape: np.ndarray = np.array([25, 25]),
+        pixel_shape: np.ndarray = np.array([30, 30]),
         pixel_offset: int = 3,
     ):
         QMainWindow.__init__(self)
         self.map_shape = np.array([9, 9])
         self.cursor_position = np.array([0, 0])
         self.pixel_shape = pixel_shape
+        self.setFixedSize(self.pixel_shape[0] * 9, self.pixel_shape[1] * 9)
         self.pixel_offset = pixel_offset
         self.label = QLabel()
         canvas = QPixmap(*(self.map_shape * pixel_shape))
@@ -30,11 +31,12 @@ class GameWindow(QMainWindow):
         self.label.setPixmap(canvas)
         self.setCentralWidget(self.label)
         self.start_game()
-        self.redraw_game_graphics()
+        self.last_key = None
 
     def start_game(self):
         self.sudoku = Sudoku(random_fill=True, random_erase=True, guessing_depth=0)
         self.complete = np.sum(self.sudoku.data == 0) == 0
+        self.redraw_game_graphics()
 
     def attempt(self, number):
         if number in self.sudoku.available_number_list(self.cursor_position):
@@ -82,6 +84,10 @@ class GameWindow(QMainWindow):
                 self.attempt(8)
             case Qt.Key_9:
                 self.attempt(9)
+            case Qt.Key_N:
+                if self.last_key == Qt.Key_N:
+                    self.start_game()
+        self.last_key = event.key()
 
     def redraw_game_graphics(self):
         canvas = self.label.pixmap()
@@ -122,6 +128,27 @@ class GameWindow(QMainWindow):
             self.cursor_position[1] * self.pixel_shape[1],
             self.pixel_shape[0],
             self.pixel_shape[1],
+        )
+        cursor_pen.setColor(Qt.black)
+        cursor_pen.setWidth(2)
+        painter.setPen(cursor_pen)
+        painter.drawLine(
+            0, 3 * self.pixel_shape[1], 9 * self.pixel_shape[0], 3 * self.pixel_shape[1]
+        )
+        painter.drawLine(
+            0, 6 * self.pixel_shape[1], 9 * self.pixel_shape[0], 6 * self.pixel_shape[1]
+        )
+        painter.drawLine(
+            3 * self.pixel_shape[0],
+            0,
+            3 * self.pixel_shape[1],
+            9 * self.pixel_shape[0],
+        )
+        painter.drawLine(
+            6 * self.pixel_shape[0],
+            0,
+            6 * self.pixel_shape[1],
+            9 * self.pixel_shape[0],
         )
         painter.end()
         self.update()
