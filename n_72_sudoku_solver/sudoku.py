@@ -15,9 +15,28 @@ class Sudoku:
         self.data = np.zeros((N**2, N**2))
         if random_fill:
             self.data[0, 0] = randint(0, 9)
-            print(self.solve_randomized())
+            self.solve_randomized()
             if random_erase:
-                
+                depth = 0
+                erasing = True
+                while erasing:
+                    erasing = False
+                    full_positions = np.transpose(np.where(self.data != 0))
+                    pos = full_positions[randint(0, N**3) % len(full_positions)]
+                    symm_pos = np.array([8, 8]) - pos
+                    cp_s = self.copy()
+                    cp_s.data[*pos] = 0
+                    cp_s.data[*symm_pos] = 0
+                    depth, _ = cp_s.guess_count()
+                    if depth <= guessing_depth:
+                        erasing = True
+                        self.data[*pos] = 0
+                        self.data[*symm_pos] = 0
+
+    def copy(self):
+        s = Sudoku()
+        s.data = np.copy(self.data)
+        return s
 
     """This function computes the list of available numbers at some position.
     """
@@ -166,4 +185,4 @@ if __name__ == "__main__":
     # print(s.guess_count())
     # print(s.data)
 
-    print(Sudoku(random_fill=True).data)
+    print(Sudoku(random_fill=True, random_erase=True, guessing_depth=10).data)
