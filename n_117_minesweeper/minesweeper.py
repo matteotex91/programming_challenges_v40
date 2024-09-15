@@ -15,8 +15,8 @@ from PyQt5.QtGui import QPixmap, QPainter, QPen, QMouseEvent
 class GameWindow(QMainWindow):
     def __init__(
         self,
-        map_shape: np.ndarray = np.array([10, 10]),
-        mines_count: int = 3,
+        map_shape: np.ndarray = np.array([15, 15]),
+        mines_count: int = 20,
         pixel_shape: np.ndarray = np.array([25, 25]),
         pixel_offset: int = 3,
     ):
