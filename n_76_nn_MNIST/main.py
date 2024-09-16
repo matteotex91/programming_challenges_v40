@@ -36,7 +36,7 @@ class NeuralEngine:
             y_test = tf.one_hot(y_test.astype(np.int32), depth=10)
             batch_size = 64
             num_classes = 10
-            epochs = 3  # set to 5
+            epochs = 5  # set to 5
             model = tf.keras.models.Sequential(
                 [
                     tf.keras.layers.Conv2D(
@@ -74,7 +74,6 @@ class NeuralEngine:
             class myCallback(tf.keras.callbacks.Callback):
                 def on_epoch_end(self, epoch, logs={}):
                     if logs.get("acc") > 0.995:
-                        print("\nReached 99.5% accuracy so cancelling training!")
                         self.model.stop_training = True
 
             callbacks = myCallback()
