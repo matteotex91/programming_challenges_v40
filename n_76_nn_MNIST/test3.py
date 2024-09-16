@@ -4,11 +4,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import os
 
 mnist = tf.keras.datasets.mnist
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-sns.countplot(y_train)
+# sns.countplot(y_train)
 
 input_shape = (28, 28, 1)
 
@@ -21,13 +22,9 @@ y_train = tf.one_hot(y_train.astype(np.int32), depth=10)
 y_test = tf.one_hot(y_test.astype(np.int32), depth=10)
 
 
-plt.imshow(x_train[100][:, :, 0])
-print(y_train[100])
-plt.show()
-
 batch_size = 64
 num_classes = 10
-epochs = 1
+epochs = 5  # set to 5
 
 
 model = tf.keras.models.Sequential(
@@ -74,16 +71,6 @@ history = model.fit(
     callbacks=[callbacks],
 )
 
-fig, ax = plt.subplots(2, 1)
-ax[0].plot(history.history["loss"], color="b", label="Training Loss")
-ax[0].plot(history.history["val_loss"], color="r", label="Validation Loss")
-legend = ax[0].legend(loc="best", shadow=True)
-
-ax[1].plot(history.history["acc"], color="b", label="Training Accuracy")
-ax[1].plot(history.history["val_acc"], color="r", label="Validation Accuracy")
-legend = ax[1].legend(loc="best", shadow=True)
-
-plt.show()
 
 test_loss, test_acc = model.evaluate(x_test, y_test)
 
@@ -98,9 +85,9 @@ Y_true = np.argmax(y_test, axis=1)
 confusion_mtx = tf.math.confusion_matrix(Y_true, Y_pred_classes)
 
 
-plt.figure(figsize=(10, 8))
-sns.heatmap(confusion_mtx, annot=True, fmt="g")
+savepath = os.getcwd() + "/n_76_nn_MNIST/model/mnist_fit.h5"
+model.save(savepath)
 
-plt.show()
+# to load model : new_model = tf.keras.models.load_model('saved_model/my_model')
 
 print("stop here")

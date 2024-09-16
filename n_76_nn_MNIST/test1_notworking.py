@@ -46,5 +46,3 @@ model.fit(
 )
 
 print("stop here")
-
-model.
