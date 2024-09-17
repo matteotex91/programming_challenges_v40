@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QLabel,
 )
-from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeyEvent, QPixmap, QPainter, QPen, QMouseEvent
 
 

@@ -176,22 +176,24 @@ class GameWindow(QMainWindow):
         if self.clicked:
             x = int(a0.x() / self.pixel_shape[0])
             y = int(a0.y() / self.pixel_shape[1])
+            if x < 0 or x > 27 or y < 0 or y > 27:
+                return
             self.map[x, y] = HIG_TONE
             if x > 0 and y > 0:
                 self.map[x - 1, y - 1] = max(LOW_TONE, self.map[x - 1, y - 1])
-            if x < 28 and y < 28:
+            if x < 27 and y < 27:
                 self.map[x + 1, y + 1] = max(LOW_TONE, self.map[x + 1, y + 1])
-            if x > 0 and y < 28:
+            if x > 0 and y < 27:
                 self.map[x - 1, y + 1] = max(LOW_TONE, self.map[x - 1, y + 1])
-            if x < 28 and y > 0:
+            if x < 27 and y > 0:
                 self.map[x + 1, y - 1] = max(LOW_TONE, self.map[x + 1, y - 1])
             if x > 0:
                 self.map[x - 1, y] = max(MID_TONE, self.map[x - 1, y])
-            if x < 28:
+            if x < 27:
                 self.map[x + 1, y] = max(MID_TONE, self.map[x + 1, y])
             if y > 0:
                 self.map[x, y - 1] = max(MID_TONE, self.map[x, y - 1])
-            if y < 28:
+            if y < 27:
                 self.map[x, y + 1] = max(MID_TONE, self.map[x, y + 1])
             self.redraw_game_graphics()
 
