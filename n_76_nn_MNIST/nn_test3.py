@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import os
+from matplotlib.backend_bases import KeyEvent
 
 mnist = tf.keras.datasets.mnist
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
@@ -25,6 +26,25 @@ y_test = tf.one_hot(y_test.astype(np.int32), depth=10)
 batch_size = 64
 num_classes = 10
 epochs = 5  # set to 5
+
+test_index = 0
+fig, ax = plt.subplots()
+
+
+def on_release(event: KeyEvent):
+    global fig, ax, x_test, test_index, y_test
+    if event.key == "left":
+        test_index = test_index - 1
+    elif event.key == "right":
+        test_index = test_index + 1
+    ax.pcolormesh(x_test[test_index, :, :, 0])
+    ax.set_title(str(y_test[test_index]))
+    fig.show()
+
+
+conn_id = fig.canvas.mpl_connect("key_release_event", on_release)
+plt.show()
+fig.canvas.mpl_disconnect(conn_id)
 
 
 model = tf.keras.models.Sequential(
