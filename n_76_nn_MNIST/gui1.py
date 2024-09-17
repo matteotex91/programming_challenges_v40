@@ -136,13 +136,12 @@ class GameWindow(QMainWindow):
                     self.pixel_shape[1],
                 )
                 color = None
-                match self.map[i, j]:
-                    case 100:
-                        color = Qt.lightGray
-                    case 175:
-                        color = Qt.gray
-                    case 255:
-                        color = Qt.darkGray
+                if self.map[i, j] == LOW_TONE:
+                    color = Qt.lightGray
+                if self.map[i, j] == MID_TONE:
+                    color = Qt.gray
+                if self.map[i, j] == HIG_TONE:
+                    color = Qt.darkGray
                 if color is not None:
                     painter.fillRect(
                         i * self.pixel_shape[0] + self.pixel_offset,
@@ -157,8 +156,8 @@ class GameWindow(QMainWindow):
             QRect(
                 0 * self.pixel_shape[0] + self.pixel_offset,
                 0 * self.pixel_shape[1] + self.pixel_offset,
-                self.pixel_shape[0] - 2 * self.pixel_offset,
-                self.pixel_shape[1] - 2 * self.pixel_offset,
+                2 * self.pixel_shape[0] - 2 * self.pixel_offset,
+                2 * self.pixel_shape[1] - 2 * self.pixel_offset,
             ),
             0,
             str(prediction),
