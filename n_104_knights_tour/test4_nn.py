@@ -5,105 +5,106 @@ import matplotlib.pyplot as plt
 """ Attempt 2 with neural network
 """
 
+MOVES = np.array(
+    [[1, 2], [-1, 2], [1, -2], [-1, -2], [2, 1], [-2, 1], [2, -1], [-2, -1]]
+)
+
+
+class Neuron:
+    def __init__(self, pos1: np.ndarray, pos2: np.ndarray):
+        self.pos1 = pos1
+        self.pos2 = pos2
+        self.neighbors = list()
+        self.state = 0
+        self.new_state = 0
+        self.output = np.random.randint(0, 2)
+        self.new_output = 0
+
+    def equals(self, n):
+        return (
+            np.array_equal(self.pos1, n.pos1) and np.array_equal(self.pos2, n.pos2)
+        ) or (np.array_equal(self.pos2, n.pos1) and np.array_equal(self.pos1, n.pos2))
+
+    def is_neighbor(self, n):
+        return (
+            np.array_equal(self.pos1, n.pos1)
+            or np.array_equal(self.pos2, n.pos2)
+            or np.array_equal(self.pos1, n.pos2)
+            or np.array_equal(self.pos2, n.pos1)
+        )
+
+    def try_add_neighbor(self, n):
+        if self.is_neighbor(n) and not self.equals(n):
+            self.neighbors.append(n)
+
+    def compute_new_state(self):
+        self.new_state = max(
+            -8, min(self.state + 2 - np.sum([n.output for n in self.neighbors]), 8)
+        )
+        if self.new_state > 3:
+            self.new_output = 1
+        elif self.new_state < 0:
+            self.new_output = 0
+        else:
+            self.new_output = self.output
+
+    def update_state(self):
+        state_changed = (self.new_output != self.output) or self.new_state != self.state
+        self.output = self.new_output
+        self.state = self.new_state
+        return state_changed
+
 
 if __name__ == "__main__":
     map_shape = np.array([20, 20])
-    map_area = map_shape[0] * map_shape[1]
-    neurons_list_A = list()
-    neurons_list_B = list()
+
+    neurons = list()
     for i in range(map_shape[0]):
         for j in range(map_shape[1]):
-            for p in np.repeat([[i, j]], axis=0, repeats=8) + MOVES:
+            pos1 = np.array([i, j])
+            for pos2 in np.repeat([pos1], axis=0, repeats=8) + MOVES:
                 if (
-                    p[0] >= 0
-                    and p[1] >= 0
-                    and p[0] < map_shape[0]
-                    and p[1] < map_shape[1]
+                    pos2[0] >= 0
+                    and pos2[1] >= 0
+                    and pos2[0] < map_shape[0]
+                    and pos2[1] < map_shape[1]
                 ):
+                    candidate = Neuron(pos1, pos2)
+                    if not any(n.equals(candidate) for n in neurons):
+                        neurons.append(candidate)
 
-                    neurons_list_A.append(i * map_shape[0] + j)
-                    neurons_list_B.append(p[0] * map_shape[0] + p[1])
+    for n1 in neurons:
+        for n2 in neurons:
+            n1.try_add_neighbor(n2)
 
-    neurons_list_A = np.array(neurons_list_A)
-    neurons_list_B = np.array(neurons_list_B)
-
-    linearized_state_function = np.zeros_like(neurons_list_A)
-    linearized_output_function = np.random.randint(0, 2, neurons_list_A.shape)
+    flag_neighbors_plot = False
+    if flag_neighbors_plot:
+        for n in neurons:
+            plt.plot([n.pos1[0], n.pos2[0]], [n.pos1[1], n.pos2[1]], color="blue")
+            for n1 in n.neighbors:
+                plt.plot(
+                    [n1.pos1[0], n1.pos2[0]], [n1.pos1[1], n1.pos2[1]], color="red"
+                )
+            plt.show()
 
     running = True
-    stabilization = 0
+    stable_count = 0
     while running:
-        new_state = np.zeros_like(linearized_state_function)
-        new_output = np.zeros_like(linearized_output_function)
-        for i, (A, B) in enumerate(zip(neurons_list_A, neurons_list_B)):
-            new_state[i] = linearized_state_function[i] + (
-                2
-                - np.sum(
-                    linearized_output_function[
-                        np.where(
-                            np.logical_and(neurons_list_A == A, neurons_list_B != B)
-                        )
-                    ]
-                )
-                - np.sum(
-                    linearized_output_function[
-                        np.where(
-                            np.logical_and(neurons_list_A != A, neurons_list_B == B)
-                        )
-                    ]
-                )
-                - np.sum(
-                    linearized_output_function[
-                        np.where(
-                            np.logical_or(neurons_list_A == B, neurons_list_B == A)
-                        )
-                    ]
-                )
-            )
-            if new_state[i] > 3:
-                new_output[i] = 1
-            elif new_state[i] < 0:
-                new_output[i] = 0
-            else:
-                new_output[i] = linearized_output_function[i]
-            # new_output[i] = (
-            #     1
-            #     if new_state[i] > 3
-            #     else (0 if new_state[i] < 0 else linearized_output_function[i])
-            # )
-        if np.array_equal(new_output, linearized_output_function):
-            linearized_state_function = np.copy(new_state)
-            linearized_output_function = np.copy(new_output)
-            stabilization += 1
+        for n in neurons:
+            n.compute_new_state()
+        update_report = [n.update_state() for n in neurons]
+        state_changed = any(update_report)
+        if state_changed:
+            stable_count = 0
         else:
-            linearized_state_function = np.copy(new_state)
-            linearized_output_function = np.copy(new_output)
-            stabilization = 0
-        if stabilization == STABILIZATION_COUNT:
+            stable_count += 1
+        if stable_count == 100:
             running = False
 
-    network_A_linearized = neurons_list_A[np.where(linearized_output_function == 1)]
-    network_B_linearized = neurons_list_B[np.where(linearized_output_function == 1)]
-
-    network_A = np.array(
-        [
-            network_A_linearized // map_shape[0],
-            network_A_linearized % map_shape[0],
-        ]
-    ).T
-    network_B = np.array(
-        [
-            network_B_linearized // map_shape[0],
-            network_B_linearized % map_shape[0],
-        ]
-    ).T
-
-    for a, b in zip(network_A, network_B):
-        plt.plot([a[0], b[0]], [a[1], b[1]])
-        plt.plot([a[1], b[1]], [a[0], b[0]])
-
-    plt.show()
-    print(network_A)
-    print(network_B)
-
+    print([n.output for n in neurons])
+    print([n.state for n in neurons])
     print("stop here")
+    for n in neurons:
+        if n.output == 1:
+            plt.plot([n.pos1[0], n.pos2[0]], [n.pos1[1], n.pos2[1]])
+    plt.show()
