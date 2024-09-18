@@ -1,6 +1,9 @@
 import numpy as np
 from tqdm import tqdm
 
+"""This works but it's very slow even with 5x5 maps. It generates all the possible solutions
+"""
+
 
 class Knight:
     def __init__(self, path):
@@ -18,8 +21,10 @@ MOVES = np.array(
 )
 
 if __name__ == "__main__":
-    map_shape = np.array([5, 3])
+    map_shape = np.array([5, 5])
     init_pos = np.array([[0, 0]])
+    flag_break_at_first_solution = True
+
     knights = list()
     knights.append(Knight(np.array(init_pos)))  # initial knight
     solutions = list()
@@ -40,8 +45,15 @@ if __name__ == "__main__":
                     k.path[0], p
                 ):
                     solutions.append(np.vstack((k.path, p)))
-
-        knights = new_knights.copy()
+                    if flag_break_at_first_solution:
+                        break
+            else:
+                continue
+            break
+        else:
+            knights = new_knights.copy()
+            continue
+        break
 
     for s in solutions:
         print(s)
