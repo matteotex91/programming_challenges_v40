@@ -56,7 +56,7 @@ class Neuron:
 
 
 if __name__ == "__main__":
-    map_shape = np.array([20, 20])
+    map_shape = np.array([8, 8])
 
     neurons = list()
     for i in range(map_shape[0]):
