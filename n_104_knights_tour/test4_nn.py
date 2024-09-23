@@ -49,10 +49,11 @@ class Neuron:
             self.new_output = self.output
 
     def update_state(self):
-        state_changed = (self.new_output != self.output) or self.new_state != self.state
+        state_changed = self.new_state != self.state
+        output_changed = self.new_output != self.output
         self.output = self.new_output
         self.state = self.new_state
-        return state_changed
+        return state_changed, output_changed
 
 
 if __name__ == "__main__":
@@ -88,18 +89,28 @@ if __name__ == "__main__":
             plt.show()
 
     running = True
-    stable_count = 0
+    converge = False
+    converge_count = 0
+    diverge_count = 0
     while running:
         for n in neurons:
             n.compute_new_state()
-        update_report = [n.update_state() for n in neurons]
-        state_changed = any(update_report)
-        if state_changed:
-            stable_count = 0
-        else:
-            stable_count += 1
-        if stable_count == 100:
+        update_report = np.array([n.update_state() for n in neurons])
+
+        state_changed = any(update_report[:, 0])
+        output_changed = any(update_report[:, 1])
+        if (not output_changed) and state_changed:
+            diverge_count += 1
+            converge_count = 0
+        elif not (output_changed and state_changed):
+            converge_count += 1
+            diverge_count = 0
+        if converge_count == 50:
             running = False
+            converge = True
+        elif diverge_count == 50:
+            running = False
+            converge = False
 
     print([n.output for n in neurons])
     print([n.state for n in neurons])
