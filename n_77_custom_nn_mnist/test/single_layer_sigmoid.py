@@ -75,6 +75,7 @@ if __name__ == "__main__":
                     g_W, g_D = cost_gradient_W_D(W, D, [x], [y])
                     W -= g_W * learning_rage
                     D -= g_D * learning_rage
+            costs.append(cost(W, D, X, Y))
 
     confusion_matrix = []
     accuracy = 0.0
