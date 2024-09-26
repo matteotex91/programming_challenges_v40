@@ -50,35 +50,33 @@ class GameWindow(QMainWindow):
         include_map = np.ones_like(mat)
         abs_mat = np.abs(mat)
         iterMat = np.zeros_like(mat)
+        iteration_count_map = np.zeros_like(mat)
 
-        for i in range(20):
+        range_limit = 4
+        iteration_limit = 100
+        max_iteration = 0
+
+        # for i in range(iteration_limit):
+        while max_iteration < iteration_limit:
             indexes = np.where(include_map == 1)
             iterMat[indexes] = np.power(iterMat[indexes], 2) + mat[indexes]
+            iteration_count_map[indexes] += 1
+            max_iteration = np.max(iteration_count_map)
             abs_mat = np.abs(iterMat)
-            include_map[np.where(abs_mat > np.average(abs_mat) + np.std(abs_mat))] = 0
+            include_map[
+                np.where(
+                    np.logical_or(
+                        abs_mat > range_limit, iteration_count_map > iteration_limit
+                    )
+                )
+            ] = 0
         abs_mat[np.isnan(abs_mat)] = 0
-        hue = abs_mat / np.max(abs_mat)
+        iteration_count_map = np.abs(iteration_count_map)
+        # iteration_count_map[np.where(include_map == 0)] = 0
+
+        hue = iteration_count_map / np.max(iteration_count_map)
         cmap = colormaps["hsv"]
         self.rgb_image = np.uint8(256 * cmap(hue)[..., :3])
-
-    def wheelEvent(self, event: QWheelEvent):
-        # mouse_x = event.pos().y()
-        # mouse_y = event.pos().x()
-        # mouse_pos = np.array(
-        #    [
-        #        mouse_x * (self.real_range[1] - self.real_range[0]) / self.map_size,
-        #        mouse_y * (self.comp_range[1] - self.comp_range[0]) / self.map_size,
-        #    ]
-        # )
-        # if event.angleDelta().y() > 0:
-        #    self.real_range = mouse_pos[0] + 1.1 * (self.real_range - mouse_pos[0])
-        #    self.comp_range = mouse_pos[1] + 1.1 * (self.comp_range - mouse_pos[1])
-        # else:
-        #    self.real_range = mouse_pos[0] + 0.9 * (self.real_range - mouse_pos[0])
-        #    self.comp_range = mouse_pos[1] + 0.9 * (self.comp_range - mouse_pos[1])
-        # self.render_fractal()
-        # self.redraw_mandelbrot_graphics()
-        ...
 
     def mousePressEvent(self, event: QMouseEvent):
         mouse_x = event.pos().x()
@@ -92,12 +90,21 @@ class GameWindow(QMainWindow):
                 + (mouse_y) * (self.comp_range[1] - self.comp_range[0]) / self.map_size,
             ]
         )
-        if event.button() == Qt.LeftButton:
-            self.real_range = mouse_pos[0] + 1.1 * (self.real_range - mouse_pos[0])
-            self.comp_range = mouse_pos[1] + 1.1 * (self.comp_range - mouse_pos[1])
-        else:
-            self.real_range = mouse_pos[0] + 0.9 * (self.real_range - mouse_pos[0])
-            self.comp_range = mouse_pos[1] + 0.9 * (self.comp_range - mouse_pos[1])
+        magn_factor = 2.5
+        if event.button() == Qt.RightButton:
+            self.real_range = (
+                mouse_pos[0] + (self.real_range - mouse_pos[0]) * magn_factor
+            )
+            self.comp_range = (
+                mouse_pos[1] + (self.comp_range - mouse_pos[1]) * magn_factor
+            )
+        elif event.button() == Qt.LeftButton:
+            self.real_range = (
+                mouse_pos[0] + (self.real_range - mouse_pos[0]) / magn_factor
+            )
+            self.comp_range = (
+                mouse_pos[1] + (self.comp_range - mouse_pos[1]) / magn_factor
+            )
         self.render_fractal()
         self.redraw_mandelbrot_graphics()
 
@@ -129,11 +136,6 @@ class GameWindow(QMainWindow):
         ...
 
     def redraw_mandelbrot_graphics(self):
-        # canvas = self.label.pixmap()
-        # painter = QPainter(canvas)
-        # self.label.setPixmap(
-        #    QPixmap.fromImage(self.qt_image, QImage.Format.Format_RGB888)
-        # )
         self.label.setPixmap(
             QPixmap(
                 QImage(
@@ -144,7 +146,6 @@ class GameWindow(QMainWindow):
                 )
             )
         )
-        # painter.end()
         self.update()
 
 
