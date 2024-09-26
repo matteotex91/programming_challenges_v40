@@ -16,7 +16,6 @@ HIG_TONE = 255  # was 255
 
 
 class NeuralEngine:
-
     def __init__(self, path: str = None):
         if path is not None:
             self.model = tf.keras.models.load_model(path)

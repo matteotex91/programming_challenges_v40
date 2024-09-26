@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-""" Attempt 2 with neural network
+""" Attempt 3 with neural network
 """
 
 MOVES = np.array(
@@ -55,9 +55,7 @@ class Neuron:
         return state_changed, output_changed
 
 
-if __name__ == "__main__":
-    map_shape = np.array([8, 8])
-
+def simulate(map_shape):
     neurons = list()
     for i in range(map_shape[0]):
         for j in range(map_shape[1]):
@@ -104,12 +102,30 @@ if __name__ == "__main__":
         elif not (output_changed and state_changed):
             converge_count += 1
             diverge_count = 0
-        if converge_count == 50:
+        if converge_count == 2:
             running = False
             converge = True
-        elif diverge_count == 50:
+        elif diverge_count == 2:
             running = False
             converge = False
+    return n, neurons, converge
+
+
+def get_converging_simulation(map_smape):
+    count = 0
+    while True:
+        n, neurons, converge = simulate(map_shape)
+        if converge:
+            return n, neurons
+        else:
+            print(count)
+            count += 1
+
+
+if __name__ == "__main__":
+    map_shape = np.array([5, 5])
+
+    n, neurons = get_converging_simulation(map_shape)
 
     print([n.output for n in neurons])
     print([n.state for n in neurons])
