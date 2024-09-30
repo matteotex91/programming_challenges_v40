@@ -49,12 +49,17 @@ class Patch:
 
 
 class SquarePatch(Patch):
+
     def __init__(
         self,
         shape: np.ndarray,
+        square_post_lower_corner: np.ndarray,
+        square_post_upper_corner: np.ndarray,
     ):
         super().__init__()
         self.shape = shape
+        self.square_post_lower_corner = square_post_lower_corner
+        self.square_post_upper_corner = square_post_upper_corner
         self.points = np.empty(shape, dtype=np.object_)
         rest_dist = 1
         diag_rest_dist = np.sqrt(2) * rest_dist
@@ -116,13 +121,22 @@ class SquarePatch(Patch):
                     )
 
     def relaxation_step(self, rate: float = 0.01):
-        self.update_forces()
+        self.update_forces(np.array([0, 0, -1]))
         self.update_positions(rate)
 
-    def update_forces(self):
+    def update_forces(self, ext_force: np.ndarray):
         for i in range(self.shape[0]):
             for j in range(self.shape[1]):
                 self.points[i, j].compute_forces()
+                self.points[i, j].force = self.points[i, j].force + ext_force
+                if (
+                    self.points[i, j].pivot[0] >= self.square_post_lower_corner[0]
+                    and self.points[i, j].pivot[0] <= self.square_post_upper_corner[0]
+                    and self.points[i, j].pivot[1] >= self.square_post_lower_corner[1]
+                    and self.points[i, j].pivot[1] <= self.square_post_upper_corner[1]
+                    and self.points[i, j].force[2] < 0
+                ):
+                    self.points[i, j].force[2] = 0
 
     def update_positions(self, rate: float) -> None:
         for i in range(self.shape[0]):
@@ -131,6 +145,9 @@ class SquarePatch(Patch):
 
     def get_z_positions(self):
         return np.array([[p.pivot[2] for p in row] for row in self.points])
+
+    def get_ith_positions(self, i):
+        return np.array([[p.pivot[i] for p in row] for row in self.points])
 
     def get_z_forces(self):
         return np.array([[p.force[2] for p in row] for row in self.points])
@@ -141,16 +158,24 @@ class SquarePatch(Patch):
 
 if __name__ == "__main__":
 
-    p = SquarePatch((10, 10))
-    p.points[2, 2].pivot[2] = 1
-    fig, ax = plt.subplots()
-    pc = ax.pcolormesh(p.get_z_positions())
+    p = SquarePatch((50, 50), (15, 15), (35, 35))
+    fig, ax = plt.subplots(1, 2)
+    pc = ax[0].pcolormesh(p.get_z_positions())
+    sc = ax[1].scatter(
+        p.get_ith_positions(0).flatten(), p.get_ith_positions(1).flatten()
+    )
 
     def update_animation(itrn):
         p.relaxation_step(rate=0.1)
         pc.set_array(p.get_z_positions())
-        # pc.autoscale()
-        ax.set_title(itrn)
+        pc.autoscale()
+        sc.set_offsets(
+            np.vstack(
+                [p.get_ith_positions(0).flatten(), p.get_ith_positions(1).flatten()]
+            ).T
+        )
+        # sc.autoscale()
+        ax[0].set_title(itrn)
         return pc
 
     anim = animation.FuncAnimation(
