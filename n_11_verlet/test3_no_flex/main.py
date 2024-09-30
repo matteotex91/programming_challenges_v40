@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 
+# simulation of a flexible rectangular elastic cloth over a rectangular pillar
+
+
 class Point:
     def __init__(
         self,
@@ -158,7 +161,7 @@ class SquarePatch(Patch):
 
 if __name__ == "__main__":
 
-    p = SquarePatch((50, 50), (15, 15), (35, 35))
+    p = SquarePatch((50, 50), (15, 15), (45, 45))
     fig, ax = plt.subplots(1, 2)
     pc = ax[0].pcolormesh(p.get_z_positions())
     sc = ax[1].scatter(
