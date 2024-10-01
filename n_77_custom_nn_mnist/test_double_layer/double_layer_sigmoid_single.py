@@ -55,7 +55,7 @@ def cost_gradient_W_D(W1, D1, W2, D2, x_calc_arr, y_exp_arr):
 
 size = 100
 epochs = 5
-iterations_per_epoch = 10000
+iterations_per_epoch = 1000
 learning_rate = 0.001
 
 W1 = np.random.random((size, size))  # generate random weights
