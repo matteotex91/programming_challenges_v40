@@ -52,7 +52,6 @@ class Patch:
 
 
 class SquarePatch(Patch):
-
     def __init__(
         self,
         shape: np.ndarray,
@@ -66,7 +65,7 @@ class SquarePatch(Patch):
         self.points = np.empty(shape, dtype=np.object_)
         rest_dist = 1
         diag_rest_dist = np.sqrt(2) * rest_dist
-        stiffness = 1
+        stiffness = 2
         for i in range(shape[0]):
             for j in range(shape[1]):
                 self.points[i, j] = Point(
@@ -160,8 +159,7 @@ class SquarePatch(Patch):
 
 
 if __name__ == "__main__":
-
-    p = SquarePatch((50, 50), (15, 15), (45, 45))
+    p = SquarePatch((50, 50), (15, 15), (48, 48))
     fig, ax = plt.subplots(1, 2)
     pc = ax[0].pcolormesh(p.get_z_positions())
     sc = ax[1].scatter(
@@ -182,6 +180,6 @@ if __name__ == "__main__":
         return pc
 
     anim = animation.FuncAnimation(
-        fig, update_animation, frames=1000, interval=1, blit=False, repeat=False
+        fig, update_animation, frames=2000, interval=1, blit=False, repeat=False
     )
     plt.show()

@@ -4,10 +4,7 @@ from tqdm import tqdm
 from scipy.stats import ortho_group
 
 """ Build a double layer nn from scratch.
-Activation function : sigmoid
-
-
-
+Activation function : analytical relu
 """
 
 

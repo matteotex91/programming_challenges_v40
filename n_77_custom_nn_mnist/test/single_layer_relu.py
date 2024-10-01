@@ -8,20 +8,19 @@ from random import shuffle
 Activation function : sigmoid
 Works not so bad for orthogonal inputs
 100% accuracy
-
 """
 
 
 def apply(W, D, X):
-    return sigmoid(np.dot(W, X) + D)
+    return activation(np.dot(W, X) + D)
 
 
-def sigmoid(v: np.ndarray) -> np.ndarray:
-    return np.sinh(v) / np.cosh(v)
+def activation(v: np.ndarray) -> np.ndarray:  # relu analytical
+    return np.log(1 + np.exp(v))
 
 
-def sigmoid_1(v: np.ndarray) -> np.ndarray:
-    return 1 / np.power(np.cosh(v), 2)
+def activation_1(v: np.ndarray) -> np.ndarray:
+    return np.divide(1, 1 + np.exp(-v))
 
 
 def cost(W, D, x_calc_arr, y_exp_arr) -> float:
@@ -37,15 +36,15 @@ def cost_gradient_W_D(W, D, x_calc_arr, y_exp_arr):
     gradient_W = np.zeros_like(W)
     for x_calc, y_exp in zip(x_calc_arr, y_exp_arr):
         sigm_arg = np.dot(W, x_calc) + D
-        y_calc = sigmoid(sigm_arg)
-        gradient_D += (y_calc - y_exp) * sigmoid_1(sigm_arg)
+        y_calc = activation(sigm_arg)
+        gradient_D += (y_calc - y_exp) * activation_1(sigm_arg)
         gradient_W += np.tensordot(gradient_D, x_calc, axes=0)
     return gradient_W, gradient_D
 
 
 if __name__ == "__main__":
     size = 100
-    iterations = 600
+    iterations = 60000
     learning_rage = 0.01
     flag_train_together = False
 
