@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy.stats import ortho_group
+from random import shuffle
 
 """ Build a double layer nn from scratch.
 Activation function : sigmoid
@@ -52,9 +53,9 @@ def cost_gradient_W_D(W1, D1, W2, D2, x_calc_arr, y_exp_arr):
     return gradient_W1, gradient_D1, gradient_W2, gradient_D2
 
 
-size = 10
+size = 100
 epochs = 5
-iterations = 100
+iterations_per_epoch = 10000
 learning_rate = 0.001
 
 W1 = np.random.random((size, size))  # generate random weights
@@ -67,19 +68,23 @@ D2 = np.random.random(size)  # generate random biases
 X = ortho_group.rvs(dim=size)  # orthogonal inputs
 Y = np.eye(size)  # canonical vectors as output
 costs = []
-
-for i in tqdm(range(iterations)):
-    (
-        g_W1,
-        g_D1,
-        g_W2,
-        g_D2,
-    ) = cost_gradient_W_D(W1, D1, W2, D2, X, Y)
-    W1 -= g_W1 * learning_rate
-    D1 -= g_D1 * learning_rate
-    W2 -= g_W2 * learning_rate
-    D2 -= g_D2 * learning_rate
-    costs.append(cost(W1, D1, W2, D2, X, Y))
+xy_data = list(zip(X, Y))
+for epoch in range(epochs):
+    print(f"epoch {epoch+1} over {epochs}")
+    for i in tqdm(range(iterations_per_epoch)):
+        shuffle(xy_data)
+        for x, y in xy_data:
+            (
+                g_W1,
+                g_D1,
+                g_W2,
+                g_D2,
+            ) = cost_gradient_W_D(W1, D1, W2, D2, [x], [y])
+            W1 -= g_W1 * learning_rate
+            D1 -= g_D1 * learning_rate
+            W2 -= g_W2 * learning_rate
+            D2 -= g_D2 * learning_rate
+        costs.append(cost(W1, D1, W2, D2, X, Y))
 
 confusion_matrix = []
 accuracy = 0.0
