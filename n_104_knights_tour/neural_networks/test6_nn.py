@@ -111,7 +111,7 @@ def simulate(map_shape):
     return n, neurons, converge
 
 
-def get_converging_simulation(map_smape):
+def get_converging_simulation(map_shape):
     count = 0
     while True:
         n, neurons, converge = simulate(map_shape)
