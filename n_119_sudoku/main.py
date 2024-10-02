@@ -1,6 +1,6 @@
 import sys
 
-from n_72_sudoku_solver.sudoku import Sudoku
+from n_72_sudoku_solver.main import Sudoku
 import numpy as np
 
 
