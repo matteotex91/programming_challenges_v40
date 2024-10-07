@@ -20,7 +20,6 @@ HIG_TONE = 255  # was 255
 
 
 class NeuralEngine:
-
     def __init__(self, path: str = None):
         if path is not None:
             self.model = tf.keras.models.load_model(path)
@@ -68,6 +67,13 @@ class NeuralEngine:
             )
 
             self.model = model
+
+            weights = model.layers[1].get_weights()[0]
+            biases = model.layers[2].get_weights()[1]
+            for row in weights.T:
+                plt.pcolormesh(np.reshape(row, (28, 28)))
+                plt.show()
+            print("stop here")
 
     def predict(self, image: np.ndarray) -> int:
         wrapped_image = np.zeros((1, *image.shape, 1))
@@ -189,7 +195,7 @@ class GameWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    nn_model_path = os.getcwd() + "/n_76_nn_MNIST/model/mnist_fit.h5"
+    # nn_model_path = os.getcwd() + "/n_76_nn_MNIST/model/mnist_fit.h5"
     app = QApplication(sys.argv)
     # win = GameWindow(nn_model_path=nn_model_path)
     win = GameWindow()

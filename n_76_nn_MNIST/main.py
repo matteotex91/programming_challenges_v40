@@ -110,11 +110,14 @@ class GameWindow(QMainWindow):
         self.pixel_shape = pixel_shape
         self.pixel_offset = pixel_offset
         self.label = QLabel()
-        self.setFixedSize(*(map_shape * pixel_shape))
-        canvas = QPixmap(*(map_shape * pixel_shape))
+        canvas_size = map_shape * pixel_shape
+        window_size = (canvas_size[0], canvas_size[1] + 40)
+        self.setFixedSize(*window_size)
+        canvas = QPixmap(*canvas_size)
         canvas.fill(Qt.lightGray)
         self.label.setPixmap(canvas)
         self.setCentralWidget(self.label)
+        self.label.move(0, 0)
         self.redraw_game_graphics()
         self.clicked = False
 
