@@ -123,7 +123,7 @@ def get_converging_simulation(map_shape):
 
 
 if __name__ == "__main__":
-    map_shape = np.array([5, 5])
+    map_shape = np.array([3, 3])
 
     n, neurons = get_converging_simulation(map_shape)
 
